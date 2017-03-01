@@ -1,280 +1,102 @@
-import uuid from 'node-uuid';
-import Promise from 'bluebird';
-import { expect } from 'chai';
+const Promise = require('bluebird');
+const expect = require('chai').expect;
 
-import { getUserGroups, getDynamicUserGroups } from '../../../server/lib/queries';
+const Auth0LogStream = require('../../src/Auth0LogStream');
 
-const mockGroups = (groups) => ({
-  hash: uuid.v4(),
-  getGroups: () => new Promise((resolve) => {
-    resolve(groups);
-  })
-});
+const fakeAuth0Client = {
+  logs: {
+    getAll: (options) =>
+      new Promise((resolve, reject) => {
+        if (options.q) {
+          return reject(new Error('bad request'));
+        }
 
-const mockConnections = (connections) => ({
-  hash: uuid.v4(),
-  connections: {
-    getAll: () => new Promise((resolve) => {
-      resolve(connections);
-    })
+        if (!options.from) {
+          return resolve([
+            { name: 'log1', _id: '1' },
+            { name: 'log2', _id: '2' },
+            { name: 'log3', _id: '3' }
+          ]);
+        }
+
+        return resolve([]);
+      })
   }
-});
+};
 
-describe('Queries', () => {
-  describe('#getUserGroups', () => {
-    it('should return an empty array if user does not belong to any groups', (done) => {
-      const db = mockGroups([
-        { _id: '123', name: 'Group 1', members: [ '111', '222', '333' ] },
-        { _id: '456', name: 'Group 2', members: [ '444', '555', '666' ] }
-      ]);
+let trueLogger;
 
-      getUserGroups(db, '777')
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(0);
-          done();
-        })
-        .catch(err => done(err));
+describe('Auth0 Log Stream', () => {
+  describe('#init', () => {
+    it('should throw error if client is undefined', (done) => {
+      const init = () => {
+        const logger = new Auth0LogStream();
+      };
+
+      expect(init).to.throw(Error, /client is required/);
+      done();
     });
 
-    it('should group memberships if user belongs to groups', (done) => {
-      const db = mockGroups([
-        { _id: '123', name: 'Group 1', members: [ '111', '222', '333' ] },
-        { _id: '456', name: 'Group 2', members: [ '444', '555', '666', '777' ] },
-        { _id: '789', name: 'Group 3', members: [ '777' ] }
-      ]);
+    it('should init logger', (done) => {
+      const init = () => {
+        trueLogger = new Auth0LogStream(fakeAuth0Client);
+      };
 
-      getUserGroups(db, '777')
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(2);
-          expect(groups[0].name).to.equal('Group 2');
-          done();
-        })
-        .catch(err => done(err));
-    });
-
-    it('should handle empty group memberships', (done) => {
-      const db = mockGroups([
-        { _id: '123', name: 'Group 1' },
-        { _id: '456', name: 'Group 2', members: [ '444', '555', '666', '777' ] },
-        { _id: '789', name: 'Group 3' }
-      ]);
-
-      getUserGroups(db, '777')
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(1);
-          expect(groups[0].name).to.equal('Group 2');
-          done();
-        })
-        .catch(err => done(err));
-    });
-
-    it('should handle nested groups', (done) => {
-      const db = mockGroups([
-        { _id: '123', name: 'Group 1', nested: [ '456' ] },
-        { _id: '456', name: 'Group 2', members: [ '444', '555', '666', '777' ] },
-        { _id: '789', name: 'Group 3' }
-      ]);
-
-      getUserGroups(db, '777')
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(2);
-          expect(groups[0].name).to.equal('Group 1');
-          expect(groups[1].name).to.equal('Group 2');
-          done();
-        })
-        .catch(err => done(err));
-    });
-
-    it('should handle nested groups that dont belong to the current user', (done) => {
-      const db = mockGroups([
-        { _id: '123', name: 'Group 1', nested: [ '789' ] },
-        { _id: '456', name: 'Group 2', members: [ '444', '555', '666', '777' ] },
-        { _id: '789', name: 'Group 3' }
-      ]);
-
-      getUserGroups(db, '777')
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(1);
-          expect(groups[0].name).to.equal('Group 2');
-          done();
-        })
-        .catch(err => done(err));
-    });
-
-    it('should handle nested groups (cyclic)', (done) => {
-      const db = mockGroups([
-        { _id: '123', name: 'Group 1', nested: [ '456', '789' ] },
-        { _id: '456', name: 'Group 2', members: [ '444', '555', '666', '777' ] },
-        { _id: '789', name: 'Group 3', nested: [ '123', '456', '789' ] }
-      ]);
-
-      getUserGroups(db, '777')
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(3);
-          expect(groups[0].name).to.equal('Group 1');
-          expect(groups[1].name).to.equal('Group 2');
-          expect(groups[2].name).to.equal('Group 3');
-          done();
-        })
-        .catch(err => done(err));
-    });
-
-    it('should ignore existing group memberships if null', (done) => {
-      const myDb = mockGroups([
-        { _id: '123', name: 'Group 1', nested: [ '456', '789' ] },
-        { _id: '456', name: 'Group 2', members: [ '444', '555', '666', '777' ] },
-        { _id: '789', name: 'Group 3', nested: [ '123', '456', '789' ] }
-      ]);
-
-      getUserGroups(myDb, '777', 'fabrikam-ad', null)
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(3);
-          expect(groups[0].name).to.equal('Group 1');
-          expect(groups[1].name).to.equal('Group 2');
-          expect(groups[2].name).to.equal('Group 3');
-          done();
-        })
-        .catch(err => done(err));
-    });
-
-    it('should ignore existing group memberships if undefined', (done) => {
-      const myDb = mockGroups([
-        { _id: '123', name: 'Group 1', nested: [ '456', '789' ] },
-        { _id: '456', name: 'Group 2', members: [ '444', '555', '666', '777' ] },
-        { _id: '789', name: 'Group 3', nested: [ '123', '456', '789' ] }
-      ]);
-
-      getUserGroups(myDb, '777', 'fabrikam-ad', undefined)
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(3);
-          expect(groups[0].name).to.equal('Group 1');
-          expect(groups[1].name).to.equal('Group 2');
-          expect(groups[2].name).to.equal('Group 3');
-          done();
-        })
-        .catch(err => done(err));
-    });
-
-    it('should ignore existing group memberships if not an array', (done) => {
-      const myDb = mockGroups([
-        { _id: '123', name: 'Group 1', nested: [ '456', '789' ] },
-        { _id: '456', name: 'Group 2', members: [ '444', '555', '666', '777' ] },
-        { _id: '789', name: 'Group 3', nested: [ '123', '456', '789' ] }
-      ]);
-
-      getUserGroups(myDb, '777', 'fabrikam-ad', 'this is not right')
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(3);
-          expect(groups[0].name).to.equal('Group 1');
-          expect(groups[1].name).to.equal('Group 2');
-          expect(groups[2].name).to.equal('Group 3');
-          done();
-        })
-        .catch(err => done(err));
+      expect(init).to.not.throw(Error);
+      expect(trueLogger).to.be.an.instanceof(Auth0LogStream);
+      done();
     });
   });
 
-  describe('#getDynamicUserGroups', () => {
-    it('should not run if connection is empty', (done) => {
-      getDynamicUserGroups(null, [])
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(0);
-          done();
-        })
-        .catch(err => done(err));
+  describe('#stream', () => {
+    it('should read logs', (done) => {
+      trueLogger.on('data', (logs) => {
+        expect(logs).to.be.an('array');
+        expect(logs.length).to.equal(3);
+        expect(trueLogger.status).to.be.an('object');
+        expect(trueLogger.status.logsProcessed).to.equal(3);
+        done();
+      });
+
+      trueLogger.next();
     });
 
-    it('should not run if existing group memberships are empty', (done) => {
-      getDynamicUserGroups('123', null)
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(0);
-          done();
-        })
-        .catch((err) => done(err));
+    it('should done reading logs', (done) => {
+      trueLogger.on('end', () => {
+        expect(trueLogger.status).to.be.an('object');
+        expect(trueLogger.status.logsProcessed).to.equal(3);
+        expect(trueLogger.lastCheckpoint).to.equal('3');
+        done();
+      });
+
+      trueLogger.done();
     });
 
-    it('should return empty if the current transaction does not match any groups', (done) => {
-      const auth0 = mockConnections([
-          { id: 'abc', name: 'my-ad' },
-          { id: 'def', name: 'other-ad' }
-      ]);
+    it('should done reading logs, if no more logs can be fount', (done) => {
+      const logger = new Auth0LogStream(fakeAuth0Client);
 
-      const db = mockGroups([
-        { _id: '123', name: 'Group 1', mappings:
-          [ { _id: '12345', groupName: 'Domain Users', connectionName: 'abc' } ]
-        },
-        { _id: '456', name: 'Group 2', mappings:
-          [ { _id: '67890', groupName: 'Domain Users', connectionName: 'def' } ]
-        }
-      ]);
+      logger.on('data', () => logger.next());
+      logger.on('end', () => {
+        expect(logger.status).to.be.an('object');
+        expect(logger.status.logsProcessed).to.equal(3);
+        expect(logger.lastCheckpoint).to.equal('3');
+        done();
+      });
 
-      getDynamicUserGroups(db, 'abc', [ 'Domain Admins' ])
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(0);
-          done();
-        })
-        .catch(err => done(err));
+      logger.next();
     });
 
-    it('should return empty if the current transaction does not match any groups', (done) => {
-      const db = mockGroups([
-        { _id: '123', name: 'Group 1', mappings:
-          [ { _id: '12345', groupName: 'Domain Users', connectionName: 'abc' } ]
-        },
-        { _id: '456', name: 'Group 2', mappings:
-          [ { _id: '67890', groupName: 'Domain Users', connectionName: 'def' } ]
-        }
-      ]);
+    it('should emit error', (done) => {
+      const logger = new Auth0LogStream(fakeAuth0Client, { types: [ 'test' ] });
 
-      getDynamicUserGroups(db, 'my-ad', [ 'Domain Admins' ])
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(0);
-          done();
-        })
-        .catch(err => done(err));
-    });
+      logger.on('data', () => logger.next());
+      logger.on('error', (error) => {
+        expect(error).to.be.an.instanceof(Error);
+        expect(error.message).to.equal('bad request');
+        done();
+      });
 
-    it('should mappings that match the current transaction', (done) => {
-      const db = mockGroups([
-        {
-          _id: '123', name: 'Group 1', mappings: [ { _id: '12345', groupName: 'Domain Users', connectionName: 'my-ad' } ]
-        },
-        {
-          _id: '456', name: 'Group 2', mappings: [
-          { _id: '67890', groupName: 'Domain Users', connectionName: 'def' },
-          { _id: '44444', groupName: 'Domain Admins', connectionName: 'my-ad' }
-        ]
-        },
-        {
-          _id: '789', name: 'Group 3', mappings: [
-          { _id: 'aaaaa', groupName: 'Domain Users', connectionName: 'my-ad' },
-          { _id: 'bbbbb', groupName: 'Domain Admins', connectionName: 'my-ad' }
-        ]
-        }
-      ]);
-
-      getDynamicUserGroups(db, 'my-ad', [ 'Domain Admins' ])
-        .then((groups) => {
-          expect(groups).to.be.instanceof(Array);
-          expect(groups.length).to.equal(2);
-          expect(groups[0].name).to.equal('Group 2');
-          expect(groups[1].name).to.equal('Group 3');
-          done();
-        })
-        .catch((err) => done(err));
+      logger.next();
     });
   });
 });
