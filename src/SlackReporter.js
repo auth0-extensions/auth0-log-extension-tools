@@ -44,11 +44,11 @@ const createPayload = function(options, status, checkpoint) {
 function SlackReporter(options) {
   options = options || {};
 
-  if (SlackReporter.instance) {
-    return SlackReporter.instance
-  }
-
   this.send = function (status, checkpoint) {
+    if (!status || typeof status !== 'object') {
+      throw new Error('object status is required');
+    }
+
     const msg = createPayload(options, status, checkpoint);
 
     return new Promise((resolve) => {
@@ -60,12 +60,8 @@ function SlackReporter(options) {
         .post(options.hook)
         .send(msg)
         .set('Accept', 'application/json')
-        .end(function(err, res) {
-          if (err && err.status === 401) {
-            console.log('Error sending to Slack: ' + err.status);
-          } else if (err && res && res.body) {
-            console.log('Error sending to Slack: ' + err.status + ' - ' + res.body);
-          } else if (err) {
+        .end(function(err) {
+          if (err) {
             console.log('Error sending to Slack: ' + err.status + ' - ' + err.message);
           }
 

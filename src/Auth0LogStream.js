@@ -14,6 +14,7 @@ function Auth0LogStream(client, options) {
 
   this.previousCheckpoint = options.checkpointId || null;
   this.lastCheckpoint = options.checkpointId || null;
+  this.lastBatch = 0;
   this.status = {
     start: new Date(),
     end: null,
@@ -36,6 +37,7 @@ function Auth0LogStream(client, options) {
           self.previousCheckpoint = self.lastCheckpoint;
           self.lastCheckpoint = logs[logs.length - 1]._id;
           self.status.logsProcessed += logs.length;
+          self.lastBatch = logs.length;
           self.push(logs);
         } else {
           self.status.end = new Date();

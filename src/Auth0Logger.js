@@ -58,7 +58,7 @@ function Auth0Logger(client, wtStorage, options) {
         stream.on('data', (logs) => {
           options.onLogsReceived(logs, (err) => {
             if (err) {
-              // stop process?
+              stream.status.logsProcessed -= stream.lastBatch;
               return processError(err, stream.status, stream.previousCheckpoint);
             }
 
