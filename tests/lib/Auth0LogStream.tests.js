@@ -11,15 +11,17 @@ const fakeAuth0Client = {
           return reject(new Error('bad request'));
         }
 
-        if (!options.from) {
-          return resolve([
-            { name: 'log1', _id: '1' },
-            { name: 'log2', _id: '2' },
-            { name: 'log3', _id: '3' }
-          ]);
+        const logs = [];
+        const from = (options.from) ? parseInt(options.from) : 0;
+        const take = options.take || 20;
+
+        for (let i = from + 1; i<=from+take; i++) {
+          if (i <= 50) {
+            logs.push({ _id: '' + i });
+          }
         }
 
-        return resolve([]);
+        return resolve(logs);
       })
   }
 };
@@ -52,9 +54,9 @@ describe('Auth0 Log Stream', () => {
     it('should read logs', (done) => {
       trueLogger.on('data', (logs) => {
         expect(logs).to.be.an('array');
-        expect(logs.length).to.equal(3);
+        expect(logs.length).to.equal(20);
         expect(trueLogger.status).to.be.an('object');
-        expect(trueLogger.status.logsProcessed).to.equal(3);
+        expect(trueLogger.status.logsProcessed).to.equal(20);
         done();
       });
 
@@ -64,8 +66,8 @@ describe('Auth0 Log Stream', () => {
     it('should done reading logs', (done) => {
       trueLogger.on('end', () => {
         expect(trueLogger.status).to.be.an('object');
-        expect(trueLogger.status.logsProcessed).to.equal(3);
-        expect(trueLogger.lastCheckpoint).to.equal('3');
+        expect(trueLogger.status.logsProcessed).to.equal(20);
+        expect(trueLogger.lastCheckpoint).to.equal('20');
         done();
       });
 
@@ -78,8 +80,8 @@ describe('Auth0 Log Stream', () => {
       logger.on('data', () => logger.next());
       logger.on('end', () => {
         expect(logger.status).to.be.an('object');
-        expect(logger.status.logsProcessed).to.equal(3);
-        expect(logger.lastCheckpoint).to.equal('3');
+        expect(logger.status.logsProcessed).to.equal(50);
+        expect(logger.lastCheckpoint).to.equal('50');
         done();
       });
 
