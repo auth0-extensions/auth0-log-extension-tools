@@ -7,10 +7,11 @@ function Auth0Storage(storage, limit) {
   this.storage = storage;
 }
 
-Auth0Storage.prototype.getCheckpoint = function () {
+Auth0Storage.prototype.getCheckpoint = function (startFrom) {
   return this.storage.read()
     .then((data) => {
-      return typeof data === 'undefined' ? null : data.checkpointId || null;
+      //TODO: check is startForm date or checkpointId. if date - convert it to checkpointId somehow
+      return typeof data === 'undefined' ? startFrom || null : data.checkpointId || startFrom || null;
     });
 };
 

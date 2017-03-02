@@ -1,5 +1,8 @@
+const _ = require('lodash');
+
 const Auth0LogStream = require('./Auth0LogStream');
 const Auth0Storage = require('./Auth0Storage');
+const logTypes = require('./logTypes');
 
 function checkOptions(options) {
   if (!options || typeof options !== 'object') {
@@ -22,7 +25,7 @@ function Auth0Logger(client, wtStorage, options) {
     const storage = new Auth0Storage(wtStorage);
     const start = new Date().getTime();
 
-    storage.getCheckpoint()
+    storage.getCheckpoint(options.startFrom)
       .then((startCheckpoint) => {
         function processError(error, status, checkpoint) {
           status.error = error;
@@ -46,10 +49,20 @@ function Auth0Logger(client, wtStorage, options) {
             .catch(next);
         }
 
+        function getSelectedTypes() {
+          let types = options.logTypes || [];
+
+          if (options.logLevel) {
+            types = types.concat(Object.keys(_.filter(logTypes, (type) => (type.level >= options.logLevel))));
+          }
+
+          return _.uniq(types);
+        }
+
         const streamOptions = {
           checkpointId: startCheckpoint,
           take: options.batchSize || 20,
-          types: options.logTypes || null
+          types: getSelectedTypes()
         };
         const stream = new Auth0LogStream(client, streamOptions);
 

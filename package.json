@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "dependencies": {
     "bluebird": "^3.4.7",
+    "lodash": "^4.17.4",
     "superagent": "^3.5.0"
   },
   "devDependencies": {
