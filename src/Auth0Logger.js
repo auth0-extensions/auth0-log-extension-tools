@@ -9,6 +9,10 @@ function checkOptions(options) {
     throw new Error('options is required');
   }
 
+  if (!options.domain || !options.clientId || !options.clientSecret) {
+    throw new Error('domain, clientId and clientSecret are required');
+  }
+
   if (!options.onLogsReceived || typeof options.onLogsReceived !== 'function') {
     throw new Error('onLogsReceived function is required');
   }
@@ -19,14 +23,30 @@ function checkTime(start, limit) {
   return start + limit * 1000 >= now;
 }
 
-function Auth0Logger(client, wtStorage, options) {
+function Auth0Logger(wtStorage, options) {
   checkOptions(options);
   return function (req, res, next) {
     const storage = new Auth0Storage(wtStorage);
     const start = new Date().getTime();
+    const batchSize = options.batchSize || 100;
 
     storage.getCheckpoint(options.startFrom)
       .then((startCheckpoint) => {
+        const streamOptions = {
+          checkpointId: startCheckpoint,
+          types: getSelectedTypes()
+        };
+
+        const auth0Options = {
+          domain: options.domain,
+          clientId: options.clientId,
+          clientSecret: options.clientSecret
+        };
+
+        const stream = new Auth0LogStream(auth0Options, streamOptions);
+        let logsBatch = [];
+        let lastLogDate = 0;
+
         function processError(error, status, checkpoint) {
           status.error = error;
 
@@ -44,9 +64,21 @@ function Auth0Logger(client, wtStorage, options) {
             options.onSuccess(status, checkpoint);
           }
 
-          storage.done(status, checkpoint)
-            .then(() => res.json({ status, checkpoint }))
-            .catch(next);
+          if (status.logsProcessed > 0) {
+            const currentDate = new Date().getTime();
+            const timeDiff = currentDate - lastLogDate;
+            const week = 604800000;
+
+            if (timeDiff >= week) {
+              status.warning = 'Logs are outdated more than for week. Last processed log has date is ' + logsBatch[logsBatch.length - 1].date;
+            }
+
+            return storage.done(status, checkpoint)
+              .then(() => res.json({ status, checkpoint }))
+              .catch(next);
+          }
+
+          return res.json({ status, checkpoint });
         }
 
         function getSelectedTypes() {
@@ -59,24 +91,39 @@ function Auth0Logger(client, wtStorage, options) {
           return _.uniq(types);
         }
 
-        const streamOptions = {
-          checkpointId: startCheckpoint,
-          take: options.batchSize || 20,
-          types: getSelectedTypes()
-        };
-        const stream = new Auth0LogStream(client, streamOptions);
+        function getNextLimit() {
+          let limit = batchSize;
+          limit -= logsBatch.length;
 
-        stream.next();
+          if (limit > 100) limit = 100;
+
+          return limit;
+        }
+
+        stream.next(getNextLimit());
 
         stream.on('data', (logs) => {
-          options.onLogsReceived(logs, (err) => {
+          logsBatch = logsBatch.concat(logs);
+
+          if (logs && logs.length) {
+            lastLogDate = new Date(logs[logs.length - 1].date).getTime();
+          }
+
+          if (logsBatch.length < batchSize) {
+            return stream.next(getNextLimit());
+          }
+
+          options.onLogsReceived(logsBatch, (err) => {
             if (err) {
-              stream.status.logsProcessed -= stream.lastBatch;
+              stream.status.logsProcessed -= logsBatch.length;
               return processError(err, stream.status, stream.previousCheckpoint);
             }
 
+            logsBatch = [];
+
             if (checkTime(start, options.timeLimit || 20)) {
-              stream.next();
+              stream.batchSaved();
+              stream.next(getNextLimit());
             } else {
               stream.done();
             }
@@ -84,11 +131,19 @@ function Auth0Logger(client, wtStorage, options) {
         });
 
         stream.on('end', () => {
-          processDone(stream.status, stream.lastCheckpoint);
+          options.onLogsReceived(logsBatch, (err) => {
+            if (err) {
+              stream.status.logsProcessed -= logsBatch.length;
+              return processError(err, stream.status, stream.previousCheckpoint);
+            }
+
+            stream.batchSaved();
+            processDone(stream.status, stream.lastCheckpoint);
+          });
         });
 
         stream.on('error', (err) => {
-          processError(err, stream.status, stream.lastCheckpoint);
+          processError(err, stream.status, stream.previousCheckpoint);
         });
       })
       .catch(next);

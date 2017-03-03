@@ -94,7 +94,7 @@ describe('Auth0 Logger', () => {
       data.checkpointId = null;
       loggerOptions.onLogsReceived = (logs, cb) => setTimeout(() => cb(), 500);
       loggerOptions.timeLimit = 1;
-      loggerOptions.batchSize = 5;
+      loggerOptions.take = 5;
       const logger = new Auth0Logger(fakeAuth0Client, fakeStorage, loggerOptions);
       const response = {
         json: (result) => {

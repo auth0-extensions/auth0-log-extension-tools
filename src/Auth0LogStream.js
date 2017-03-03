@@ -1,12 +1,16 @@
 const Readable = require('stream').Readable;
 const util = require('util');
 
-function Auth0LogStream(client, options) {
-  if (!client) {
-    throw new Error('client is required');
+const Auth0Client = require('./Auth0Client');
+
+function Auth0LogStream(auth0Options, options) {
+  if (!auth0Options) {
+    throw new Error('auth0Options is required');
   }
 
+  const client = new Auth0Client(auth0Options);
   const self = this;
+  let remaining = 50;
 
   options = options || {};
 
@@ -26,18 +30,24 @@ function Auth0LogStream(client, options) {
     self.push(null);
   };
 
-  this.next = function() {
-    client.logs.getAll({
+  this.next = function(take) {
+    if (remaining < 1) {
+      self.status.warning = 'Auth0 Management API rate limit reached.';
+      return self.done();
+    }
+
+    client.getLogs({
       q: getQuery(options.types),
-      take: options.take || 20,
+      take: take || 100,
       from: self.lastCheckpoint
     })
-      .then(logs => {
+      .then((data) => {
+        const logs = data.logs;
+        remaining = data.limits.remaining;
+
         if (logs && logs.length) {
-          self.previousCheckpoint = self.lastCheckpoint;
           self.lastCheckpoint = logs[logs.length - 1]._id;
-          self.status.logsProcessed += logs.length;
-          self.lastBatch = logs.length;
+          self.lastBatch += logs.length;
           self.push(logs);
         } else {
           self.status.end = new Date();
@@ -45,6 +55,12 @@ function Auth0LogStream(client, options) {
         }
       })
       .catch(err => self.emit('error', err));
+  };
+
+  this.batchSaved = function() {
+    self.previousCheckpoint = self.lastCheckpoint;
+    self.status.logsProcessed += self.lastBatch;
+    self.lastBatch = 0;
   };
 }
 
