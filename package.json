@@ -18,7 +18,7 @@
     "eslint-plugin-jsx-a11y": "^3.0.1",
     "faucet": "0.0.1",
     "jsonwebtoken": "^7.1.9",
-    "nock": "^9.0.2",
+    "nock": "^9.0.9",
     "nyc": "^8.4.0",
     "tape": "^4.6.2"
   },

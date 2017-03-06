@@ -9,12 +9,12 @@ function checkOptions(options) {
     throw new Error('options is required');
   }
 
-  if (!options.domain || !options.clientId || !options.clientSecret) {
-    throw new Error('domain, clientId and clientSecret are required');
-  }
-
   if (!options.onLogsReceived || typeof options.onLogsReceived !== 'function') {
     throw new Error('onLogsReceived function is required');
+  }
+
+  if (!options.domain || !options.clientId || !options.clientSecret) {
+    throw new Error('domain, clientId and clientSecret are required');
   }
 }
 
@@ -70,7 +70,7 @@ function Auth0Logger(wtStorage, options) {
             const week = 604800000;
 
             if (timeDiff >= week) {
-              status.warning = 'Logs are outdated more than for week. Last processed log has date is ' + logsBatch[logsBatch.length - 1].date;
+              status.warning = 'Logs are outdated more than for week. Last processed log has date is ' + new Date(lastLogDate);
             }
 
             return storage.done(status, checkpoint)
@@ -115,7 +115,6 @@ function Auth0Logger(wtStorage, options) {
 
           options.onLogsReceived(logsBatch, (err) => {
             if (err) {
-              stream.status.logsProcessed -= logsBatch.length;
               return processError(err, stream.status, stream.previousCheckpoint);
             }
 
@@ -133,7 +132,6 @@ function Auth0Logger(wtStorage, options) {
         stream.on('end', () => {
           options.onLogsReceived(logsBatch, (err) => {
             if (err) {
-              stream.status.logsProcessed -= logsBatch.length;
               return processError(err, stream.status, stream.previousCheckpoint);
             }
 

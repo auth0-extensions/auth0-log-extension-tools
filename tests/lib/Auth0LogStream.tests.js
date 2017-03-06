@@ -1,87 +1,105 @@
-const Promise = require('bluebird');
 const expect = require('chai').expect;
 
+const auth0Mock = require('../auth0');
 const Auth0LogStream = require('../../src/Auth0LogStream');
 
-const fakeAuth0Client = {
-  logs: {
-    getAll: (options) =>
-      new Promise((resolve, reject) => {
-        if (options.q) {
-          return reject(new Error('bad request'));
-        }
-
-        const logs = [];
-        const from = (options.from) ? parseInt(options.from) : 0;
-        const take = options.take || 20;
-
-        for (let i = from + 1; i<=from+take; i++) {
-          if (i <= 50) {
-            logs.push({ _id: '' + i });
-          }
-        }
-
-        return resolve(logs);
-      })
-  }
+const auth0Options = {
+  domain: 'foo.auth0.local',
+  clientId: '1',
+  clientSecret: 'secret'
 };
-
-let trueLogger;
 
 describe('Auth0 Log Stream', () => {
   describe('#init', () => {
-    it('should throw error if client is undefined', (done) => {
+    it('should throw error if auth0Options is undefined', (done) => {
       const init = () => {
         const logger = new Auth0LogStream();
       };
 
-      expect(init).to.throw(Error, /client is required/);
+      expect(init).to.throw(Error, /auth0Options is required/);
       done();
     });
 
     it('should init logger', (done) => {
-      const init = () => {
-        trueLogger = new Auth0LogStream(fakeAuth0Client);
-      };
+      const logger = new Auth0LogStream(auth0Options);
 
-      expect(init).to.not.throw(Error);
-      expect(trueLogger).to.be.an.instanceof(Auth0LogStream);
+      expect(logger).to.be.an.instanceof(Auth0LogStream);
       done();
     });
   });
 
   describe('#stream', () => {
+    before((done) => {
+      auth0Mock.token();
+
+      done();
+    });
+
     it('should read logs', (done) => {
-      trueLogger.on('data', (logs) => {
+      auth0Mock.logs();
+
+      const logger = new Auth0LogStream(auth0Options);
+
+      logger.on('data', (logs) => {
         expect(logs).to.be.an('array');
-        expect(logs.length).to.equal(20);
-        expect(trueLogger.status).to.be.an('object');
-        expect(trueLogger.status.logsProcessed).to.equal(20);
+        expect(logs.length).to.equal(100);
+        expect(logger.status).to.be.an('object');
         done();
       });
 
-      trueLogger.next();
+      logger.next();
     });
 
     it('should done reading logs', (done) => {
-      trueLogger.on('end', () => {
-        expect(trueLogger.status).to.be.an('object');
-        expect(trueLogger.status.logsProcessed).to.equal(20);
-        expect(trueLogger.lastCheckpoint).to.equal('20');
+      auth0Mock.logs();
+
+      const logger = new Auth0LogStream(auth0Options);
+
+      logger.on('data', (logs) => {
+        logger.done();
+      });
+
+      logger.on('end', () => {
+        logger.batchSaved();
+        expect(logger.status).to.be.an('object');
+        expect(logger.status.logsProcessed).to.equal(100);
+        expect(logger.lastCheckpoint).to.equal('100');
         done();
       });
 
-      trueLogger.done();
+      logger.next();
     });
 
     it('should done reading logs, if no more logs can be fount', (done) => {
-      const logger = new Auth0LogStream(fakeAuth0Client);
+      auth0Mock.logs();
+      auth0Mock.logs({ empty: true });
+
+      const logger = new Auth0LogStream(auth0Options);
 
       logger.on('data', () => logger.next());
       logger.on('end', () => {
+        logger.batchSaved();
         expect(logger.status).to.be.an('object');
-        expect(logger.status.logsProcessed).to.equal(50);
-        expect(logger.lastCheckpoint).to.equal('50');
+        expect(logger.status.logsProcessed).to.equal(100);
+        expect(logger.lastCheckpoint).to.equal('100');
+        done();
+      });
+
+      logger.next();
+    });
+
+    it('should done reading logs, if ratelimit reached', (done) => {
+      auth0Mock.logs({ limit: 0 });
+
+      const logger = new Auth0LogStream(auth0Options, { types: [ 'test' ] });
+
+      logger.on('data', () => logger.next());
+      logger.on('end', () => {
+        logger.batchSaved();
+        expect(logger.status).to.be.an('object');
+        expect(logger.status.logsProcessed).to.equal(100);
+        expect(logger.status.warning).to.equal('Auth0 Management API rate limit reached.');
+        expect(logger.lastCheckpoint).to.equal('100');
         done();
       });
 
@@ -89,12 +107,13 @@ describe('Auth0 Log Stream', () => {
     });
 
     it('should emit error', (done) => {
-      const logger = new Auth0LogStream(fakeAuth0Client, { types: [ 'test' ] });
+      auth0Mock.logs({ error: 'bad request' });
+
+      const logger = new Auth0LogStream(auth0Options, { types: [ 'test' ] });
 
       logger.on('data', () => logger.next());
       logger.on('error', (error) => {
-        expect(error).to.be.an.instanceof(Error);
-        expect(error.message).to.equal('bad request');
+        expect(error.response.text).to.equal('bad request');
         done();
       });
 

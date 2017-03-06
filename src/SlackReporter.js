@@ -51,7 +51,7 @@ function SlackReporter(options) {
 
     const msg = createPayload(options, status, checkpoint);
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       if (!options.hook) {
         return resolve();
       }
@@ -62,7 +62,7 @@ function SlackReporter(options) {
         .set('Accept', 'application/json')
         .end(function(err) {
           if (err) {
-            console.log('Error sending to Slack: ' + err.status + ' - ' + err.message);
+            return reject(err);
           }
 
           return resolve();

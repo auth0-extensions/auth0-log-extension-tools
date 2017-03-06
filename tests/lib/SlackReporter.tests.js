@@ -1,5 +1,6 @@
 const expect = require('chai').expect;
 
+const auth0Mock = require('../auth0');
 const SlackReporter = require('../../src/SlackReporter');
 
 describe('Slack Reporter', () => {
@@ -29,10 +30,20 @@ describe('Slack Reporter', () => {
 
 
     it('should send data to hook url', (done) => {
-      const repoter = new SlackReporter({ hook: 'http://127.0.0.1' });
+      auth0Mock.slack();
+
+      const repoter = new SlackReporter({ hook: 'https://slack.local' });
 
       repoter.send({ error: 'some error' }, 'checkpoint')
         .then(done);
+    });
+
+    it('should catch error, if occurred', (done) => {
+      const repoter = new SlackReporter({ hook: 'https://slack.local' });
+
+      repoter.send({ error: 'some error' }, 'checkpoint')
+        .then()
+        .catch((err) => done());
     });
   });
 });
