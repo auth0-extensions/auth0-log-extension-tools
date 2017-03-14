@@ -131,9 +131,34 @@ describe('Auth0 Logger', () => {
       logger({}, response, {});
     });
 
-    it('should process logs and done by error in onLogsReceived', (done) => {
+    it('should process logs and done with error by timeout', (done) => {
+      auth0Mock.token();
       auth0Mock.logs();
 
+      loggerOptions.timeLimit = 1;
+      loggerOptions.maxRetries = 5;
+      loggerOptions.onLogsReceived = (logs, cb) => setTimeout(() => cb(new Error('ERROR')), 500);
+
+      const logger = new Auth0Logger(fakeStorage, loggerOptions);
+      const response = {
+        json: (result) => {
+          expect(result).to.be.an('object');
+          expect(result.status).to.be.an('object');
+          expect(result.status.error).to.be.an.instanceof(Error, /ERROR/);
+          expect(result.status.logsProcessed).to.equal(0);
+          expect(result.checkpoint).to.equal('300');
+          done();
+        }
+      };
+
+      logger({}, response, {});
+    });
+
+    it('should process logs and done by error in onLogsReceived', (done) => {
+      auth0Mock.token();
+      auth0Mock.logs();
+
+      loggerOptions.maxRetries = 1;
       loggerOptions.onLogsReceived = (logs, cb) => cb(new Error('ERROR'));
 
       const logger = new Auth0Logger(fakeStorage, loggerOptions);
@@ -142,8 +167,8 @@ describe('Auth0 Logger', () => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.logsProcessed).to.equal(0);
-          expect(result.status.error).to.be.an.instanceof(Error, /ERROR/);
-          expect(result.checkpoint).to.equal('300');
+          expect(result.status.error).to.be.an('array');
+          expect(result.checkpoint).to.equal('400');
           done();
         }
       };

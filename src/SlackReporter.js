@@ -23,7 +23,7 @@ const createPayload = function(options, status, checkpoint) {
     error_field: { title: 'Error', value: error, short: false }
   };
 
-  const details = (options.url) ? ` (<${options.url}|Details>)` : null;
+  const details = (options.url) ? (' (<' + options.url + '|Details>)') : null;
 
   const fields = defaultTemplate.fields;
 
@@ -51,7 +51,7 @@ function SlackReporter(options) {
 
     const msg = createPayload(options, status, checkpoint);
 
-    return new Promise((resolve, reject) => {
+    return new Promise(function(resolve, reject) {
       if (!options.hook) {
         return resolve();
       }

@@ -10,7 +10,7 @@ function Auth0LogStream(auth0Options, options) {
 
   const client = new Auth0Client(auth0Options);
   const self = this;
-  let remaining = 50;
+  var remaining = 50;
 
   options = options || {};
 
@@ -36,12 +36,12 @@ function Auth0LogStream(auth0Options, options) {
       return self.done();
     }
 
-    client.getLogs({
-      q: getQuery(options.types),
-      take: take || 100,
-      from: self.lastCheckpoint
-    })
-      .then((data) => {
+    const params = (self.lastCheckpoint) ? { take: take || 100, from: self.lastCheckpoint } : { per_page: take || 100, page: 0 };
+    params.q = getQuery(options.types);
+    params.sort = 'date:1';
+
+    client.getLogs(params)
+      .then(function(data) {
         const logs = data.logs;
         remaining = data.limits.remaining;
 
@@ -54,7 +54,7 @@ function Auth0LogStream(auth0Options, options) {
           self.push(null);
         }
       })
-      .catch(err => self.emit('error', err));
+      .catch(function(err) { self.emit('error', err); });
   };
 
   this.batchSaved = function() {
@@ -73,7 +73,7 @@ function getQuery (types) {
     return '';
   }
 
-  return `type:${types.join(' OR type:')}`;
+  return 'type:' + types.join(' OR type:');
 }
 
 module.exports = Auth0LogStream;

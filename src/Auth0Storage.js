@@ -8,23 +8,34 @@ function Auth0Storage(storage, limit) {
 }
 
 Auth0Storage.prototype.getCheckpoint = function (startFrom) {
-  return this.storage.read()
-    .then((data) => {
-      //TODO: check is startForm date or checkpointId. if date - convert it to checkpointId somehow
-      return typeof data === 'undefined' ? startFrom || null : data.checkpointId || startFrom || null;
+  const self = this;
+  return self.storage.read()
+    .then(function(data) {
+      data = data || {};
+
+      if (startFrom !== data.startFrom) {
+        data.startFrom = startFrom;
+        data.checkpointId = startFrom;
+      }
+
+      return self.storage.write(data)
+        .then(function() {
+          return data.checkpointId || startFrom || null;
+        });
     });
 };
 
 Auth0Storage.prototype.done = function (status, checkpoint) {
-  return this.storage.read()
-    .then((data) => {
+  const self = this;
+  return self.storage.read()
+    .then(function(data) {
       const storageSize = Buffer.byteLength(JSON.stringify(data), 'utf8');
 
       if (!data.logs) {
         data.logs = [];
       }
 
-      if (storageSize >= this.limit * 1024 && data.logs && data.logs.length) {
+      if (storageSize >= self.limit * 1024 && data.logs && data.logs.length) {
         data.logs.splice(0, 5);
       }
 
@@ -32,7 +43,7 @@ Auth0Storage.prototype.done = function (status, checkpoint) {
       data.logs.push(status);
       data.checkpointId = checkpoint;
 
-      return this.storage.write(data);
+      return self.storage.write(data);
     });
 };
 

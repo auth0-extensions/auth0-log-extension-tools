@@ -29,9 +29,10 @@ function Auth0Logger(wtStorage, options) {
     const storage = new Auth0Storage(wtStorage);
     const start = new Date().getTime();
     const batchSize = options.batchSize || 100;
+    const maxRetries = options.maxRetries || 5;
 
     storage.getCheckpoint(options.startFrom)
-      .then((startCheckpoint) => {
+      .then(function(startCheckpoint) {
         const streamOptions = {
           checkpointId: startCheckpoint,
           types: getSelectedTypes()
@@ -44,8 +45,9 @@ function Auth0Logger(wtStorage, options) {
         };
 
         const stream = new Auth0LogStream(auth0Options, streamOptions);
-        let logsBatch = [];
-        let lastLogDate = 0;
+        var logsBatch = [];
+        var lastLogDate = 0;
+        var retries = 0;
 
         function processError(error, status, checkpoint) {
           status.error = error;
@@ -55,7 +57,7 @@ function Auth0Logger(wtStorage, options) {
           }
 
           storage.done(status, checkpoint)
-            .then(() => res.json({ status, checkpoint }))
+            .then(function () { return res.json({ status: status, checkpoint: checkpoint }); })
             .catch(next);
         }
 
@@ -74,25 +76,25 @@ function Auth0Logger(wtStorage, options) {
             }
 
             return storage.done(status, checkpoint)
-              .then(() => res.json({ status, checkpoint }))
+              .then(function() { res.json({ status: status, checkpoint: checkpoint }); })
               .catch(next);
           }
 
-          return res.json({ status, checkpoint });
+          return res.json({ status: status, checkpoint: checkpoint });
         }
 
         function getSelectedTypes() {
-          let types = options.logTypes || [];
+          var types = options.logTypes || [];
 
           if (options.logLevel) {
-            types = types.concat(Object.keys(_.filter(logTypes, (type) => (type.level >= options.logLevel))));
+            types = types.concat(Object.keys(_.filter(logTypes, function (type) { return (type.level >= options.logLevel); })));
           }
 
           return _.uniq(types);
         }
 
         function getNextLimit() {
-          let limit = batchSize;
+          var limit = batchSize;
           limit -= logsBatch.length;
 
           if (limit > 100) limit = 100;
@@ -102,7 +104,7 @@ function Auth0Logger(wtStorage, options) {
 
         stream.next(getNextLimit());
 
-        stream.on('data', (logs) => {
+        stream.on('data', function(logs) {
           logsBatch = logsBatch.concat(logs);
 
           if (logs && logs.length) {
@@ -113,9 +115,23 @@ function Auth0Logger(wtStorage, options) {
             return stream.next(getNextLimit());
           }
 
-          options.onLogsReceived(logsBatch, (err) => {
+          const handleError = function(err) {
             if (err) {
-              return processError(err, stream.status, stream.previousCheckpoint);
+              if (!checkTime(start, options.timeLimit || 20)) {
+                return processError(err, stream.status, stream.previousCheckpoint);
+              }
+
+              if (retries < maxRetries) {
+                retries++;
+                return options.onLogsReceived(logsBatch, handleError);
+              }
+
+              const error = [
+                'Skipping logs from ' + stream.previousCheckpoint + ' to ' + stream.lastCheckpoint + ' after ' + maxRetries + ' retries.',
+                err
+              ];
+
+              return processError(error, stream.status, stream.lastCheckpoint);
             }
 
             logsBatch = [];
@@ -126,11 +142,13 @@ function Auth0Logger(wtStorage, options) {
             } else {
               stream.done();
             }
-          });
+          };
+
+          options.onLogsReceived(logsBatch, handleError);
         });
 
-        stream.on('end', () => {
-          options.onLogsReceived(logsBatch, (err) => {
+        stream.on('end', function() {
+          options.onLogsReceived(logsBatch, function(err) {
             if (err) {
               return processError(err, stream.status, stream.previousCheckpoint);
             }
@@ -140,7 +158,7 @@ function Auth0Logger(wtStorage, options) {
           });
         });
 
-        stream.on('error', (err) => {
+        stream.on('error', function(err) {
           processError(err, stream.status, stream.previousCheckpoint);
         });
       })
