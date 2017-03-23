@@ -1,4 +1,4 @@
-module.exports = {
+const logTypes = {
   's': {
     event: 'Success Login',
     level: 1 // Info
@@ -189,4 +189,8 @@ module.exports = {
     event: 'Failed Delegation',
     level: 3 // Error
   }
+};
+
+module.exports = function (type) {
+  return (logTypes[type] && logTypes[type].event) || 'Unknown Log Type: ' + type;
 };
