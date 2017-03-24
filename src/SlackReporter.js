@@ -8,7 +8,8 @@ const createPayload = function(options, status, checkpoint) {
     attachments: []
   };
 
-  const defaultText = (status.error) ? 'Auth0 Logger Error' : 'Auth0 Logger Success';
+  const title = options.title || 'Auth0 Logger';
+  const defaultText = (status.error) ? title + ' Error' : title + ' Success';
   const error = (status.error) ? status.error.message || status.error[0] || 'Error occurred' : null;
 
   const defaultTemplate = {

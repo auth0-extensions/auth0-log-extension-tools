@@ -2,12 +2,27 @@ const expect = require('chai').expect;
 
 const auth0Mock = require('../auth0');
 const Auth0LogStream = require('../../src/Auth0LogStream');
+const Auth0Storage = require('../../src/Auth0Storage');
+
+const data = { checkpointId: null };
 
 const auth0Options = {
   domain: 'foo.auth0.local',
   clientId: '1',
   clientSecret: 'secret'
 };
+
+const fakeStorage = {
+  read: () => new Promise((resolve) => resolve(data)),
+  write: (obj) => new Promise((resolve) => {
+    data.logs = obj.logs;
+    data.checkpointId = obj.checkpointId;
+    data.auth0Token = obj.auth0Token;
+    resolve();
+  })
+};
+
+const storage = new Auth0Storage(fakeStorage);
 
 describe('Auth0 Log Stream', () => {
   describe('#init', () => {
@@ -21,7 +36,7 @@ describe('Auth0 Log Stream', () => {
     });
 
     it('should init logger', (done) => {
-      const logger = new Auth0LogStream(auth0Options);
+      const logger = new Auth0LogStream(auth0Options, {}, storage);
 
       expect(logger).to.be.an.instanceof(Auth0LogStream);
       done();
@@ -38,7 +53,7 @@ describe('Auth0 Log Stream', () => {
     it('should read logs', (done) => {
       auth0Mock.logs();
 
-      const logger = new Auth0LogStream(auth0Options);
+      const logger = new Auth0LogStream(auth0Options, {}, storage);
 
       logger.on('data', (logs) => {
         expect(logs).to.be.an('array');
@@ -53,7 +68,7 @@ describe('Auth0 Log Stream', () => {
     it('should done reading logs', (done) => {
       auth0Mock.logs();
 
-      const logger = new Auth0LogStream(auth0Options);
+      const logger = new Auth0LogStream(auth0Options, {}, storage);
 
       logger.on('data', (logs) => {
         logger.done();
@@ -74,7 +89,7 @@ describe('Auth0 Log Stream', () => {
       auth0Mock.logs();
       auth0Mock.logs({ empty: true });
 
-      const logger = new Auth0LogStream(auth0Options);
+      const logger = new Auth0LogStream(auth0Options, {}, storage);
 
       logger.on('data', () => logger.next());
       logger.on('end', () => {
@@ -91,7 +106,7 @@ describe('Auth0 Log Stream', () => {
     it('should done reading logs, if ratelimit reached', (done) => {
       auth0Mock.logs({ limit: 0 });
 
-      const logger = new Auth0LogStream(auth0Options, { types: [ 'test' ] });
+      const logger = new Auth0LogStream(auth0Options, { types: [ 'test' ] }, storage);
 
       logger.on('data', () => logger.next());
       logger.on('end', () => {
@@ -109,7 +124,7 @@ describe('Auth0 Log Stream', () => {
     it('should emit error', (done) => {
       auth0Mock.logs({ error: 'bad request' });
 
-      const logger = new Auth0LogStream(auth0Options, { types: [ 'test' ] });
+      const logger = new Auth0LogStream(auth0Options, { types: [ 'test' ] }, storage);
 
       logger.on('data', () => logger.next());
       logger.on('error', (error) => {

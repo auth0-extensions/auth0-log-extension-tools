@@ -44,7 +44,7 @@ function Auth0Logger(wtStorage, options) {
           clientSecret: options.clientSecret
         };
 
-        const stream = new Auth0LogStream(auth0Options, streamOptions);
+        const stream = new Auth0LogStream(auth0Options, streamOptions, storage);
         var logsBatch = [];
         var lastLogDate = 0;
         var retries = 0;

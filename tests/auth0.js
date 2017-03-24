@@ -1,11 +1,14 @@
 const nock = require('nock');
+const jwt = require('jsonwebtoken');
 const querystring = require('querystring');
 
-module.exports.token = () =>
-  nock('https://foo.auth0.local')
-    .post('/oauth/token')
-    .reply(200, { access_token: 'access_token', id_token: 'id_token', ok: true });
+module.exports.token = () => {
+  const token = jwt.sign({ exp: new Date().getTime() + 300000, state: 'fine' }, 'token');
 
+  return nock('https://foo.auth0.local')
+    .post('/oauth/token')
+    .reply(200, { access_token: token, id_token: 'id_token', ok: true });
+};
 
 module.exports.logs = (options = {}) =>
    nock('https://foo.auth0.local', {

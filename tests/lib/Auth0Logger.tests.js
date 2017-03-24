@@ -11,6 +11,7 @@ const fakeStorage = {
   write: (obj) => new Promise((resolve) => {
     data.logs = obj.logs;
     data.checkpointId = obj.checkpointId;
+    data.auth0Token = obj.auth0Token;
     resolve();
   })
 };
@@ -112,7 +113,6 @@ describe('Auth0 Logger', () => {
     });
 
     it('should process logs and done by error', (done) => {
-      auth0Mock.token();
       auth0Mock.logs();
       auth0Mock.logs({ error: 'bad request' });
 
@@ -132,7 +132,6 @@ describe('Auth0 Logger', () => {
     });
 
     it('should process logs and done with error by timeout', (done) => {
-      auth0Mock.token();
       auth0Mock.logs();
 
       loggerOptions.timeLimit = 1;
@@ -155,7 +154,6 @@ describe('Auth0 Logger', () => {
     });
 
     it('should process logs and done by error in onLogsReceived', (done) => {
-      auth0Mock.token();
       auth0Mock.logs();
 
       loggerOptions.maxRetries = 1;

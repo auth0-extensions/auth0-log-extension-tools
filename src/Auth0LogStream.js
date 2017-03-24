@@ -3,12 +3,12 @@ const util = require('util');
 
 const Auth0Client = require('./Auth0Client');
 
-function Auth0LogStream(auth0Options, options) {
+function Auth0LogStream(auth0Options, options, storage) {
   if (!auth0Options) {
     throw new Error('auth0Options is required');
   }
 
-  const client = new Auth0Client(auth0Options);
+  const client = new Auth0Client(auth0Options, storage);
   const self = this;
   var remaining = 50;
 

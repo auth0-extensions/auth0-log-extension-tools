@@ -25,6 +25,27 @@ Auth0Storage.prototype.getCheckpoint = function (startFrom) {
     });
 };
 
+Auth0Storage.prototype.getToken = function () {
+  const self = this;
+  return self.storage.read()
+    .then(function(data) {
+      data = data || {};
+
+      return data.auth0Token || null;
+    });
+};
+
+Auth0Storage.prototype.setToken = function (token) {
+  const self = this;
+  return self.storage.read()
+    .then(function(data) {
+      data = data || {};
+      data.auth0Token = token;
+
+      return self.storage.write(data);
+    });
+};
+
 Auth0Storage.prototype.done = function (status, checkpoint) {
   const self = this;
   return self.storage.read()

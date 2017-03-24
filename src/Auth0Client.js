@@ -29,44 +29,45 @@ const getAccessToken = function (options) {
   });
 };
 
-const getAccessTokenCached = Promise.promisify(
-  memoizer({
-      load: function load(options, callback) {
-        getAccessToken(options)
-          .then(function(accessToken) { return callback(null, accessToken); })
-          .catch(function(err) { callback(err); });
-      },
-      hash: function (domain, clientId, clientSecret) {
-        return domain + '-' + clientId + '-' + clientSecret;
-      },
-      itemMaxAge: function (domain, clientId, clientSecret, accessToken) {
-        try {
-          const decodedToken = jwt.decode(accessToken);
-          const expiresIn = new Date(0);
-          expiresIn.setUTCSeconds(decodedToken.exp);
-          const now = new Date().valueOf();
-          return (expiresIn.valueOf() - now) - 10000;
-        } catch (e) {
-          return 1000;
-        }
-      },
-      max: 100,
-      maxAge: 60 * 60000
-    }
-  ));
+const getAccessTokenCached = function (options, storage) {
+  return storage.getToken()
+    .then(token => {
+      if (token) {
+        const decodedToken = jwt.decode(token);
+        const expiresIn = new Date(0);
 
-function Auth0Client(options) {
+        console.log(token);
+        console.log(decodedToken);
+        expiresIn.setUTCSeconds((decodedToken && decodedToken.exp) || 0);
+        const now = new Date().valueOf();
+
+        if ((expiresIn.valueOf() - now) > 10000) {
+          return token;
+        }
+      }
+
+      return getAccessToken(options)
+        .then(token => {
+          storage.setToken(token);
+
+          return token;
+        });
+    })
+};
+
+function Auth0Client(options, storage) {
   if (!options || !options.domain || !options.clientId || !options.clientSecret) {
     throw new Error('domain, clientId and clientSecret are required');
   }
 
   this.options = options;
+  this.storage = storage;
 }
 
 Auth0Client.prototype.getLogs = function (params) {
   const self = this;
   return new Promise(function(resolve, reject) {
-    getAccessTokenCached(self.options)
+    getAccessTokenCached(self.options, self.storage)
       .then(function(token) {
         const query = querystring.stringify(params);
         
