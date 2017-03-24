@@ -35,9 +35,6 @@ const getAccessTokenCached = function (options, storage) {
       if (token) {
         const decodedToken = jwt.decode(token);
         const expiresIn = new Date(0);
-
-        console.log(token);
-        console.log(decodedToken);
         expiresIn.setUTCSeconds((decodedToken && decodedToken.exp) || 0);
         const now = new Date().valueOf();
 
