@@ -4,13 +4,13 @@ const util = require('util');
 const Auth0Client = require('./Auth0Client');
 
 function Auth0LogStream(auth0Options, options, storage) {
+  var remaining = 50;
   if (!auth0Options) {
     throw new Error('auth0Options is required');
   }
 
   const client = new Auth0Client(auth0Options, storage);
   const self = this;
-  var remaining = 50;
 
   options = options || {};
 
@@ -36,11 +36,14 @@ function Auth0LogStream(auth0Options, options, storage) {
       return self.done();
     }
 
-    const params = (self.lastCheckpoint) ? { take: take || 100, from: self.lastCheckpoint } : { per_page: take || 100, page: 0 };
+    const params = self.lastCheckpoint
+      ? { take: take || 100, from: self.lastCheckpoint }
+      : { per_page: take || 100, page: 0 };
     params.q = getQuery(options.types);
     params.sort = 'date:1';
 
-    client.getLogs(params)
+    client
+      .getLogs(params)
       .then(function(data) {
         const logs = data.logs;
         remaining = data.limits.remaining;
@@ -54,10 +57,12 @@ function Auth0LogStream(auth0Options, options, storage) {
           self.push(null);
         }
       })
-      .catch(function(err) { self.emit('error', err); });
+      .catch(function(err) {
+        self.emit('error', err);
+      });
   };
 
-  this.batchSaved = function() {
+  this.batchSaved = function onBatchSaved() {
     self.previousCheckpoint = self.lastCheckpoint;
     self.status.logsProcessed += self.lastBatch;
     self.lastBatch = 0;
@@ -68,7 +73,7 @@ util.inherits(Auth0LogStream, Readable);
 
 Auth0LogStream.prototype._read = function read() {};
 
-function getQuery (types) {
+function getQuery(types) {
   if (!types || !types.length) {
     return '';
   }

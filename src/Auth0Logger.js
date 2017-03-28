@@ -20,18 +20,19 @@ function checkOptions(options) {
 
 function checkTime(start, limit) {
   const now = new Date().getTime();
-  return start + limit * 1000 >= now;
+  return (start + limit) * 1000 >= now;
 }
 
 function Auth0Logger(wtStorage, options) {
   checkOptions(options);
-  return function (req, res, next) {
+  return function(req, res, next) {
     const storage = new Auth0Storage(wtStorage);
     const start = new Date().getTime();
     const batchSize = options.batchSize || 100;
     const maxRetries = options.maxRetries || 5;
 
-    storage.getCheckpoint(options.startFrom)
+    storage
+      .getCheckpoint(options.startFrom)
       .then(function(startCheckpoint) {
         const streamOptions = {
           checkpointId: startCheckpoint,
@@ -56,8 +57,11 @@ function Auth0Logger(wtStorage, options) {
             options.onError(status, checkpoint);
           }
 
-          storage.done(status, checkpoint)
-            .then(function () { return res.json({ status: status, checkpoint: checkpoint }); })
+          storage
+            .done(status, checkpoint)
+            .then(function() {
+              return res.json({ status: status, checkpoint: checkpoint });
+            })
             .catch(next);
         }
 
@@ -72,11 +76,15 @@ function Auth0Logger(wtStorage, options) {
             const week = 604800000;
 
             if (timeDiff >= week) {
-              status.warning = 'Logs are outdated more than for week. Last processed log has date is ' + new Date(lastLogDate);
+              status.warning = 'Logs are outdated more than for week. Last processed log has date is ' +
+                new Date(lastLogDate);
             }
 
-            return storage.done(status, checkpoint)
-              .then(function() { res.json({ status: status, checkpoint: checkpoint }); })
+            return storage
+              .done(status, checkpoint)
+              .then(function() {
+                res.json({ status: status, checkpoint: checkpoint });
+              })
               .catch(next);
           }
 
@@ -87,7 +95,13 @@ function Auth0Logger(wtStorage, options) {
           var types = options.logTypes || [];
 
           if (options.logLevel) {
-            types = types.concat(Object.keys(_.filter(logTypes, function (type) { return (type.level >= options.logLevel); })));
+            types = types.concat(
+              Object.keys(
+                _.filter(logTypes, function(type) {
+                  return type.level >= options.logLevel;
+                })
+              )
+            );
           }
 
           return _.uniq(types);
@@ -127,7 +141,13 @@ function Auth0Logger(wtStorage, options) {
               }
 
               const error = [
-                'Skipping logs from ' + stream.previousCheckpoint + ' to ' + stream.lastCheckpoint + ' after ' + maxRetries + ' retries.',
+                'Skipping logs from ' +
+                  stream.previousCheckpoint +
+                  ' to ' +
+                  stream.lastCheckpoint +
+                  ' after ' +
+                  maxRetries +
+                  ' retries.',
                 err
               ];
 
@@ -163,7 +183,7 @@ function Auth0Logger(wtStorage, options) {
         });
       })
       .catch(next);
-  }
+  };
 }
 
 module.exports = Auth0Logger;

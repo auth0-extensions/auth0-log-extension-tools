@@ -1,196 +1,196 @@
 const logTypes = {
-  's': {
+  s: {
     event: 'Success Login',
     level: 1 // Info
   },
-  'seacft': {
+  seacft: {
     event: 'Success Exchange',
     level: 1 // Info
   },
-  'seccft': {
+  seccft: {
     event: 'Success Exchange (Client Credentials)',
     level: 1 // Info
   },
-  'feacft': {
+  feacft: {
     event: 'Failed Exchange',
     level: 3 // Error
   },
-  'feccft': {
+  feccft: {
     event: 'Failed Exchange (Client Credentials)',
     level: 3 // Error
   },
-  'f': {
+  f: {
     event: 'Failed Login',
     level: 3 // Error
   },
-  'w': {
+  w: {
     event: 'Warnings During Login',
     level: 2 // Warning
   },
-  'du': {
+  du: {
     event: 'Deleted User',
     level: 1 // Info
   },
-  'fu': {
+  fu: {
     event: 'Failed Login (invalid email/username)',
     level: 3 // Error
   },
-  'fp': {
+  fp: {
     event: 'Failed Login (wrong password)',
     level: 3 // Error
   },
-  'fc': {
+  fc: {
     event: 'Failed by Connector',
     level: 3 // Error
   },
-  'fco': {
+  fco: {
     event: 'Failed by CORS',
     level: 3 // Error
   },
-  'con': {
+  con: {
     event: 'Connector Online',
     level: 1 // Info
   },
-  'coff': {
+  coff: {
     event: 'Connector Offline',
     level: 3 // Error
   },
-  'fcpro': {
+  fcpro: {
     event: 'Failed Connector Provisioning',
     level: 4 // Critical
   },
-  'ss': {
+  ss: {
     event: 'Success Signup',
     level: 1 // Info
   },
-  'fs': {
+  fs: {
     event: 'Failed Signup',
     level: 3 // Error
   },
-  'cs': {
+  cs: {
     event: 'Code Sent',
     level: 0 // Debug
   },
-  'cls': {
+  cls: {
     event: 'Code/Link Sent',
     level: 0 // Debug
   },
-  'sv': {
+  sv: {
     event: 'Success Verification Email',
     level: 0 // Debug
   },
-  'fv': {
+  fv: {
     event: 'Failed Verification Email',
     level: 0 // Debug
   },
-  'scp': {
+  scp: {
     event: 'Success Change Password',
     level: 1 // Info
   },
-  'fcp': {
+  fcp: {
     event: 'Failed Change Password',
     level: 3 // Error
   },
-  'sce': {
+  sce: {
     event: 'Success Change Email',
     level: 1 // Info
   },
-  'fce': {
+  fce: {
     event: 'Failed Change Email',
     level: 3 // Error
   },
-  'scu': {
+  scu: {
     event: 'Success Change Username',
     level: 1 // Info
   },
-  'fcu': {
+  fcu: {
     event: 'Failed Change Username',
     level: 3 // Error
   },
-  'scpn': {
+  scpn: {
     event: 'Success Change Phone Number',
     level: 1 // Info
   },
-  'fcpn': {
+  fcpn: {
     event: 'Failed Change Phone Number',
     level: 3 // Error
   },
-  'svr': {
+  svr: {
     event: 'Success Verification Email Request',
     level: 0 // Debug
   },
-  'fvr': {
+  fvr: {
     event: 'Failed Verification Email Request',
     level: 3 // Error
   },
-  'scpr': {
+  scpr: {
     event: 'Success Change Password Request',
     level: 0 // Debug
   },
-  'fcpr': {
+  fcpr: {
     event: 'Failed Change Password Request',
     level: 3 // Error
   },
-  'fn': {
+  fn: {
     event: 'Failed Sending Notification',
     level: 3 // Error
   },
-  'sapi': {
+  sapi: {
     event: 'API Operation'
   },
-  'fapi': {
+  fapi: {
     event: 'Failed API Operation'
   },
-  'limit_wc': {
+  limit_wc: {
     event: 'Blocked Account',
     level: 4 // Critical
   },
-  'limit_ui': {
+  limit_ui: {
     event: 'Too Many Calls to /userinfo',
     level: 4 // Critical
   },
-  'api_limit': {
+  api_limit: {
     event: 'Rate Limit On API',
     level: 4 // Critical
   },
-  'sdu': {
+  sdu: {
     event: 'Successful User Deletion',
     level: 1 // Info
   },
-  'fdu': {
+  fdu: {
     event: 'Failed User Deletion',
     level: 3 // Error
   },
-  'fapi': {
+  fapi: {
     event: 'Failed API Operation',
     level: 3 // Error
   },
-  'limit_wc': {
+  limit_wc: {
     event: 'Blocked Account',
     level: 3 // Error
   },
-  'limit_mu': {
+  limit_mu: {
     event: 'Blocked IP Address',
     level: 3 // Error
   },
-  'slo': {
+  slo: {
     event: 'Success Logout',
     level: 1 // Info
   },
-  'flo': {
+  flo: {
     event: ' Failed Logout',
     level: 3 // Error
   },
-  'sd': {
+  sd: {
     event: 'Success Delegation',
     level: 1 // Info
   },
-  'fd': {
+  fd: {
     event: 'Failed Delegation',
     level: 3 // Error
   }
 };
 
-module.exports = function (type) {
+module.exports = function(type) {
   return (logTypes[type] && logTypes[type].event) || 'Unknown Log Type: ' + type;
 };
