@@ -4,78 +4,69 @@ const tools = require('auth0-extension-tools');
 
 const helpers = require('../helpers');
 const LogsProcessor = require('../../src/processor');
+const webtaskStorage = require('../helpers/webtaskStorage');
 
-const createProcessor = (filters) => {
+const createProcessor = (data) => {
   const options = {
     domain: 'foo.auth0.local',
     clientId: '1',
     clientSecret: 'secret'
   };
-  return new LogsProcessor(options);
+
+  const storage = webtaskStorage(data);
+  return new LogsProcessor(webtaskStorage.context(storage), options);
 };
 
 describe('LogsProcessor', () => {
   describe('#init', () => {
-    it('should throw error if options is undefined', (done) => {
+    it.only('should throw error if the storageContext is undefined', (done) => {
       const init = () => {
         const processor = new LogsProcessor();
       };
 
-      expect(init).to.throw(Error, /options is required/);
+      expect(init).to.throw(tools.ArgumentError);
       done();
     });
 
-    it('should throw error if options.onLogsReceived is not a function', (done) => {
+    it.only('should throw error if the options are undefined', (done) => {
       const init = () => {
-        const processor = new LogsProcessor(null, {});
+        const processor = new LogsProcessor({ });
       };
 
-      expect(init).to.throw(Error, /onLogsReceived function is required/);
+      expect(init).to.throw(tools.ArgumentError);
       done();
     });
 
-    it('should throw error if auth0 options is undefined', (done) => {
-      const init = () => {
-        const processor = new LogsProcessor(null, { onLogsReceived: (logs, cb) => cb() });
-      };
-
-      expect(init).to.throw(Error, /domain, clientId and clientSecret are required/);
-      done();
-    });
-
-    it('should init logger', (done) => {
+    it.only('should init logger', (done) => {
       let logger;
       const init = () => {
         logger = createProcessor();
       };
 
       expect(init).to.not.throw(Error);
-      expect(logger).to.be.a('function');
+      expect(logger).to.be.an.instanceof(LogsProcessor);
       done();
     });
   });
 
-  describe('#middleware', () => {
+  describe('#run', () => {
     beforeEach((done) => {
       helpers.mocks.token();
       done();
     });
 
-    it('should process logs and send response', (done) => {
+    it.only('should process logs and send response', (done) => {
       helpers.mocks.logs({ times: 5 });
 
-      const processor = new Auth0Logger(fakeStorage, loggerOptions);
-      const response = {
-        json: (result) => {
+      const processor = createProcessor();
+      processor.run((logs, cb) => setTimeout(() => cb()))
+        .then((result) => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.logsProcessed).to.equal(500);
           expect(result.checkpoint).to.equal('500');
           done();
-        }
-      };
-
-      logger({}, response, {});
+        });
     });
 
     it('should process logs and done by timelimit', (done) => {

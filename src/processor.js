@@ -11,11 +11,14 @@ function LogsProcessor(storageContext, options) {
   }
 
   this.storage = new StorageProvider(storageContext);
-  this.options = _.assign({ }, options, {
-    batchSize: 100,
-    maxRetries: 5,
-    maxRunTimeSeconds: 20
-  });
+  this.options = _.assign({ },
+    {
+      batchSize: 100,
+      maxRetries: 5,
+      maxRunTimeSeconds: 20
+    },
+    options
+  );
 }
 
 LogsProcessor.prototype.hasTimeLeft = function(start) {
@@ -44,12 +47,13 @@ LogsProcessor.prototype.createStream = function(options) {
   return self.storage
     .getCheckpoint(options.startFrom)
     .then(function(startCheckpoint) {
-      return new LogsApiStream(self.storage, {
+      return new LogsApiStream({
         checkpointId: startCheckpoint,
         types: self.getLogFilter(options),
         domain: options.domain,
         clientId: options.clientId,
-        clientSecret: options.clientSecret
+        clientSecret: options.clientSecret,
+        tokenCache: self.storage
       });
     });
 };
@@ -104,7 +108,6 @@ LogsProcessor.prototype.run = function(handler) {
     const getNextLimit = function() {
       var limit = batchSize;
       limit -= logsBatch.length;
-
       if (limit > 100) {
         limit = 100;
       }
