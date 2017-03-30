@@ -7,9 +7,7 @@ function StorageProvider(storageContext, options) {
   }
 
   this.storageContext = storageContext;
-  this.options = assign({ }, options, {
-    limit: 400
-  });
+  this.options = assign({ }, { limit: 400 }, options);
 }
 
 StorageProvider.prototype.read = function() {
@@ -31,15 +29,17 @@ StorageProvider.prototype.getCheckpoint = function(startFrom) {
   const self = this;
   return self.read()
     .then(function(data) {
-      if (startFrom !== data.startFrom) {
+      if (startFrom && startFrom !== data.startFrom) {
         data.startFrom = startFrom;
         data.checkpointId = startFrom;
+
+        return self.write(data)
+          .then(function() {
+            return data.checkpointId || startFrom || null;
+          });
       }
 
-      return self.write(data)
-        .then(function() {
-          return data.checkpointId || startFrom || null;
-        });
+      return data.checkpointId;
     });
 };
 

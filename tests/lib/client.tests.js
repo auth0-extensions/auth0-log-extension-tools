@@ -2,22 +2,10 @@ const nock = require('nock');
 const expect = require('chai').expect;
 const tools = require('auth0-extension-tools');
 
+const tokenCache = require('../helpers').tokenCache;
 const LogsApiClient = require('../../src/client');
 
-const tokenCache = () => {
-  var cached = null;
-  return {
-    getToken: function() {
-      return Promise.resolve(cached);
-    },
-    setToken: function(token) {
-      cached = token;
-      return Promise.resolve();
-    }
-  };
-};
-
-describe.only('LogsApiClient', () => {
+describe('LogsApiClient', () => {
   describe('#init', () => {
     it('should throw error if options is undefined', (done) => {
       const init = () => {
@@ -27,6 +15,7 @@ describe.only('LogsApiClient', () => {
       expect(init).to.throw(tools.ArgumentError, /Must provide an options object/);
       done();
     });
+
     it('should validate options', (done) => {
       try {
         const client = new LogsApiClient();

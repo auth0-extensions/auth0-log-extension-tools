@@ -1,64 +1,52 @@
 const expect = require('chai').expect;
 const assign = require('lodash').assign;
-const auth0Mock = require('../auth0');
+const tools = require('auth0-extension-tools');
+
+const helpers = require('../helpers');
 const LogsApiStream = require('../../src/stream');
-const Auth0Storage = require('../../src/storage');
 
-const data = { checkpointId: null };
-
-const auth0Options = {
-  domain: 'foo.auth0.local',
-  clientId: '1',
-  clientSecret: 'secret'
+const createStream = (filters) => {
+  const options = {
+    types: filters,
+    domain: 'foo.auth0.local',
+    clientId: '1',
+    clientSecret: 'secret',
+    tokenCache: helpers.tokenCache()
+  };
+  return new LogsApiStream(options);
 };
 
-const fakeStorage = {
-  read: () => new Promise(resolve => resolve(data)),
-  write: obj =>
-    new Promise((resolve) => {
-      data.logs = obj.logs;
-      data.checkpointId = obj.checkpointId;
-      data.auth0Token = obj.auth0Token;
-      resolve();
-    })
-};
-
-const storage = new Auth0Storage(fakeStorage);
-
-describe('Auth0 Log Stream', () => {
+describe.only('LogsApiStream', () => {
   describe('#init', () => {
-    it('should throw error if auth0Options is undefined', (done) => {
+    it('should throw error if options is undefined', (done) => {
       const init = () => {
         const logger = new LogsApiStream();
       };
 
-      expect(init).to.throw(Error, /auth0Options is required/);
+      expect(init).to.throw(tools.ArgumentError);
       done();
     });
 
-    it('should init logger', (done) => {
-      const logger = new LogsApiStream(auth0Options, storage);
-
+    it('should initialize the stream', (done) => {
+      const logger = createStream();
       expect(logger).to.be.an.instanceof(LogsApiStream);
       done();
     });
   });
 
   describe('#stream', () => {
-    before((done) => {
-      auth0Mock.token();
-
+    beforeEach((done) => {
+      helpers.mocks.token();
       done();
     });
 
     it('should read logs', (done) => {
-      auth0Mock.logs();
+      helpers.mocks.logs();
 
-      const logger = new LogsApiStream(auth0Options, storage);
-
-      logger.on('data', (logs) => {
-        expect(logs).to.be.an('array');
-        expect(logs.length).to.equal(100);
+      const logger = createStream();
+      logger.on('data', (data) => {
+        expect(data.logs).to.be.an('array');
+        expect(data.logs.length).to.equal(100);
         expect(logger.status).to.be.an('object');
         done();
       });
@@ -67,11 +55,10 @@ describe('Auth0 Log Stream', () => {
     });
 
     it('should done reading logs', (done) => {
-      auth0Mock.logs();
+      helpers.mocks.logs();
 
-      const logger = new LogsApiStream(auth0Options, storage);
-
-      logger.on('data', (logs) => {
+      const logger = createStream();
+      logger.on('data', () => {
         logger.done();
       });
 
@@ -87,11 +74,10 @@ describe('Auth0 Log Stream', () => {
     });
 
     it('should done reading logs, if no more logs can be fount', (done) => {
-      auth0Mock.logs();
-      auth0Mock.logs({ empty: true });
+      helpers.mocks.logs();
+      helpers.mocks.logs({ empty: true });
 
-      const logger = new LogsApiStream(auth0Options, storage);
-
+      const logger = createStream();
       logger.on('data', () => logger.next());
       logger.on('end', () => {
         logger.batchSaved();
@@ -105,10 +91,9 @@ describe('Auth0 Log Stream', () => {
     });
 
     it('should done reading logs, if ratelimit reached', (done) => {
-      auth0Mock.logs({ limit: 0 });
+      helpers.mocks.logs({ limit: 0 });
 
-      const logger = new LogsApiStream(assign({ types: [ 'test' ] }, auth0Options), storage);
-
+      const logger = createStream({ types: [ 'test' ] });
       logger.on('data', () => logger.next());
       logger.on('end', () => {
         logger.batchSaved();
@@ -122,11 +107,10 @@ describe('Auth0 Log Stream', () => {
       logger.next();
     });
 
-    it('should emit error', (done) => {
-      auth0Mock.logs({ error: 'bad request' });
+    it('should emit errors correctly', (done) => {
+      helpers.mocks.logs({ error: 'bad request' });
 
-      const logger = new LogsApiStream(assign({ types: [ 'test' ] }, auth0Options), storage);
-
+      const logger = createStream({ types: [ 'test' ] });
       logger.on('data', () => logger.next());
       logger.on('error', (error) => {
         expect(error.response.text).to.equal('bad request');

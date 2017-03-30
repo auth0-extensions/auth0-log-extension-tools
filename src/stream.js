@@ -12,6 +12,7 @@ function LogsApiStream(options) {
   Readable.call(this, { objectMode: true });
 
   this.client = new LogsApiClient(options);
+  this.options = options;
   this.remaining = 50;
   this.lastBatch = 0;
   this.previousCheckpoint = options.checkpointId || null;

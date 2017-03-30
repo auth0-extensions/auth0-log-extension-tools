@@ -1,6 +1,6 @@
 const expect = require('chai').expect;
 
-const auth0Mock = require('../auth0');
+const auth0Mock = require('../helpers/mocks');
 const SlackReporter = require('../../src/reporters/slack');
 
 describe('Slack Reporter', () => {

@@ -1,7 +1,7 @@
 const Promise = require('bluebird');
 const expect = require('chai').expect;
 
-const auth0Mock = require('../auth0');
+const auth0Mock = require('../helpers/mocks');
 const Auth0Logger = require('../../src/processor');
 
 const data = { checkpointId: null };
