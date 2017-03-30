@@ -4,6 +4,7 @@
   "description": "A set of tools for logging",
   "main": "src/index.js",
   "dependencies": {
+    "auth0-extension-tools": "^1.2.1",
     "bluebird": "^3.4.7",
     "lodash": "^4.17.4",
     "superagent": "^3.5.0"
@@ -20,7 +21,7 @@
     "faucet": "0.0.1",
     "jsonwebtoken": "^7.1.9",
     "mocha": "^3.2.0",
-    "nock": "^9.0.9",
+    "nock": "^9.0.11",
     "nyc": "^10.2.0",
     "rimraf": "^2.6.1",
     "tape": "^4.6.2"

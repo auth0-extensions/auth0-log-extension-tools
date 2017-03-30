@@ -1,7 +1,7 @@
 const expect = require('chai').expect;
 
 const auth0Mock = require('../auth0');
-const SlackReporter = require('../../src/SlackReporter');
+const SlackReporter = require('../../src/reporters/slack');
 
 describe('Slack Reporter', () => {
   describe('#init', () => {
@@ -43,7 +43,7 @@ describe('Slack Reporter', () => {
 
       repoter.send({ error: 'some error' }, 'checkpoint')
         .then()
-        .catch((err) => done());
+        .catch(err => done());
     });
   });
 });

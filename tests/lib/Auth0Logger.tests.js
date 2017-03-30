@@ -2,13 +2,13 @@ const Promise = require('bluebird');
 const expect = require('chai').expect;
 
 const auth0Mock = require('../auth0');
-const Auth0Logger = require('../../src/Auth0Logger');
+const Auth0Logger = require('../../src/processor');
 
 const data = { checkpointId: null };
 
 const fakeStorage = {
-  read: () => new Promise((resolve) => resolve(data)),
-  write: (obj) => new Promise((resolve) => {
+  read: () => new Promise(resolve => resolve(data)),
+  write: obj => new Promise((resolve) => {
     data.logs = obj.logs;
     data.checkpointId = obj.checkpointId;
     data.auth0Token = obj.auth0Token;

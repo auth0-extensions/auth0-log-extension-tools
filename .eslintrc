@@ -4,7 +4,8 @@
     "modules": true
   },
   "env": {
-    "node": true
+    "node": true,
+    "mocha": true
   },
   "rules": {
     "max-len": 0,

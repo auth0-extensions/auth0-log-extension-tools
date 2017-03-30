@@ -191,6 +191,7 @@ const logTypes = {
   }
 };
 
-module.exports = function(type) {
+module.exports = logTypes;
+module.exports.get = function(type) {
   return (logTypes[type] && logTypes[type].event) || 'Unknown Log Type: ' + type;
 };

@@ -1,58 +1,110 @@
 # auth0-log-extension-tools
 
-## Usage 
-`const Auth0Logger = require('auth0-log-extension-tools').Auth0Logger;`
+## Logs API Client
 
-``
+The API client is a low level client allowing you to fetch logs from the Auth0 Management API. This client will get an access_token from the Management API and cache it in memory for as long as it is valid.
 
-````
-const options = {
+```js
+const client = new LogsApiClient({
+  domain: config('AUTH0_DOMAIN'),
+  clientId: config('AUTH0_CLIENT_ID'),
+  clientSecret: config('AUTH0_CLIENT_SECRET'),
+  tokenCache: myTokenCache
+});
+
+client.getLogs(query)
+  .then(data => {
+    // data.logs contains an array of logs.
+    // data.limits contains the rate limit details for this request.
+  });
+```
+
+A custom token cache provider can be supplied to persist the token somewhere (instead of in memory):
+
+```js
+{
+  getToken: function() {
+    return Promise.resolve('my token');
+  },
+  setToken: function(token) {
+    // Save the token somewhere
+    return Promise.resolve();
+  }
+}
+```
+
+## Logs API Stream
+
+The stream client is a wrapper around the API client and allows you to fetch all logs from a specific point (the checkpoint ID).
+
+```js
+const stream = new LogsApiStream({
+  domain: config('AUTH0_DOMAIN'),
+  clientId: config('AUTH0_CLIENT_ID'),
+  clientSecret: config('AUTH0_CLIENT_SECRET'),
+  tokenCache: myTokenCache,
+  checkpointId: startCheckpoint,
+  types: [ 'ss', 'fn' ]
+});
+
+// Get the first batch of 50 items.
+stream.next(50);
+
+// Process batch of logs.
+stream.on('data', function(data) {
+  // data.logs contains an array of logs.
+  // data.limits contains the rate limit details for this request.
+
+  // You can now ask for the next batch.
+  stream.next(50);
+
+  // Or you can also stop the stream.
+  stream.done();
+});
+
+// We've reached the end of the stream OR rate limiting kicked in.
+stream.on('end', function() {
+
+});
+
+// An error occured when processing the stream.
+stream.on('error', function(err) {
+  console.log(err);
+});
+```
+
+## Logs Processor
+
+The logs processor will orchestrate everything to make log shipping and processing much easier. It will handle retries, timeouts etc..
+
+ - `batchSize`: Size of the batch we'll make available in the handler
+ - `maxRetries`: How many times the batch should be retried (the send part) before discarding the logs
+ - `maxRunTimeSeconds`: How long the processor is allowed to run
+ - `startFrom`: The Auth0 Log identifier to start from
+ - `logTypes`: An array of log types to filter on
+ - `logLevel`: The log level to filter on (0 = debug, 1 = info, 2 = warning, 3 = error, 4 = critical)
+
+```js
+const processor = new LogsProcessor(storageContext, {
   domain: config('AUTH0_DOMAIN'),
   clientId: config('AUTH0_CLIENT_ID'),
   clientSecret: config('AUTH0_CLIENT_SECRET'),
   batchSize: config('BATCH_SIZE'),
   startFrom: config('START_FROM'),
-  logTypes: config('LOG_TYPES'),
-  logLevel: config('LOG_LEVEL'),
-  onLogsReceived: onLogsReceived,
-  onSuccess: onSuccess,
-  onError: onError
-};
+  logTypes: [ 'ss', 'fn' ],
+  logLevel: config('LOG_LEVEL')
+});
 
-function onLogsReceived (logs, cb) {
-  sendLogsSomewhere(function(err, result) {
-    if (err) {
-      return cb(err);
-    }
-    
-    cb();
-  });
-}
+processor
+  .run((logs, cb) => {
+    sendLogsSomewhere(function(err, result) {
+      if (err) {
+        return cb(err);
+      }
 
-function onSuccess (status, checkpointId) {
-  // do something with success message
-}
-
-function onError (status, checkpointId) {
-  // do something with error message
-}
-
-const logger = Auth0Logger(storage, options);
-
-logger(req, res, next);
-````
-
-Storage is webtask storage object with `read` and `write` methods.
-Possible options:
-- `domain` - auth0 domain, required
-- `clientId` - auth0 client id, required
-- `clientSecret` - auth0 client secret, required
-- `onLogsReceived` - function (logs, callback), executes when full batch is received from auth0, required
-- `batchSize` - size of logs batch, 100 by default
-- `maxRetries` - describe how many times to retry sending logs, 5 by default
-- `timeLimit` - describes in which time session should be completed, 20 seconds by default
-- `startFrom` - auth0 log id to start from, optional
-- `logTypes` - array of log types, that you want to process, optional
-- `logLevel` - level of logs, that you want to process, optional
-- `onError` - function (status, lastCheckpoint), executes in case of error, optional
-- `onSuccess` - function (status, lastCheckpoint), executes in case of success, optional
+      cb();
+    });
+  })
+  .then(status => console.log(status))
+  .catch(err => console.log(err));
+```

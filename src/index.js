@@ -1,6 +1,13 @@
-// do we need anything else?
-module.exports.Auth0Logger = require('./Auth0Logger');
+const SlackReporter = require('./reporters/slack');
 
-module.exports.SlackReporter = require('./SlackReporter');
+module.exports.LogsProcessor = require('./processor');
 
-module.exports.getLogType = require('./logTypes');
+module.exports.LogsApiClient = require('./client');
+
+module.exports.LogsApiStream = require('./stream');
+
+module.exports.logTypes = require('./logTypes');
+
+module.exports.reporters = {
+  SlackReporter: SlackReporter
+};
