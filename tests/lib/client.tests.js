@@ -232,7 +232,6 @@ describe('LogsApiClient', () => {
         .then(function(data) {
           expect(data.token).to.equal('abc');
 
-
           setTimeout(function() {
             nock('https://tenant.auth0cluster.com')
               .post('/oauth/token')
