@@ -44,5 +44,16 @@
     "webtask"
   ],
   "author": "Auth0",
-  "license": "MIT"
+  "license": "MIT",
+  "nyc": {
+    "include": [
+      "src/*.js",
+      "src/**/*.js"
+    ],
+    "require": [
+      "babel-register"
+    ],
+    "sourceMap": true,
+    "instrument": true
+  }
 }
