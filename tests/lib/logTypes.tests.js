@@ -2,7 +2,7 @@ const expect = require('chai').expect;
 
 const logTypes = require('../../src/logTypes');
 
-describe.only('logTypes', () => {
+describe('logTypes', () => {
   it('should contain all log events', () => {
     expect(Object.keys(logTypes).length > 10).to.equal(true);
   });
