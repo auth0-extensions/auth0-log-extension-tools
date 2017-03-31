@@ -1,5 +1,4 @@
 const nock = require('nock');
-const jwt = require('jsonwebtoken');
 const querystring = require('querystring');
 
 module.exports.token = () => nock('https://foo.auth0.local')

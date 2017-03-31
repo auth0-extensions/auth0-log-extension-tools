@@ -24,7 +24,7 @@ function LogsProcessor(storageContext, options) {
 LogsProcessor.prototype.hasTimeLeft = function(start) {
   const now = new Date().getTime();
   const limit = this.options.maxRunTimeSeconds;
-  return (start + limit) * 1000 >= now;
+  return start + limit * 1000 >= now;
 };
 
 LogsProcessor.prototype.getLogFilter = function(options) {
@@ -76,7 +76,7 @@ LogsProcessor.prototype.run = function(handler) {
       storage
         .done(status, checkpoint)
         .then(function() {
-          return reject(error);
+          return resolve({ status: status, checkpoint: checkpoint });
         })
         .catch(reject);
     };
@@ -122,7 +122,7 @@ LogsProcessor.prototype.run = function(handler) {
 
       if (retries < maxRetries) {
         retries += 1;
-        return handler.onLogsReceived(logsBatch, handleError);
+        return handler(logsBatch, handleError);
       }
 
       const error = [
@@ -146,7 +146,8 @@ LogsProcessor.prototype.run = function(handler) {
         stream.next(getNextLimit());
 
         // Process batch of logs.
-        stream.on('data', function(logs) {
+        stream.on('data', function(data) {
+          const logs = data.logs;
           logsBatch = logsBatch.concat(logs);
 
           if (logs && logs.length) {
@@ -172,8 +173,7 @@ LogsProcessor.prototype.run = function(handler) {
             stream.batchSaved();
             return stream.next(getNextLimit());
           };
-
-          return handler.onLogsReceived(logsBatch, processComplete);
+          return handler(logsBatch, processComplete);
         });
 
         // We've reached the end of the stream.
@@ -186,7 +186,7 @@ LogsProcessor.prototype.run = function(handler) {
             stream.batchSaved();
             return runSuccess(stream.status, stream.lastCheckpoint);
           };
-          handler.onLogsReceived(logsBatch, processComplete);
+          handler(logsBatch, processComplete);
         });
 
         // An error occured when processing the stream.

@@ -5,7 +5,7 @@ const tools = require('auth0-extension-tools');
 const StorageProvider = require('../../src/storage');
 const memoryStorage = require('../helpers').memoryStorage;
 
-describe.only('StorageProvider', () => {
+describe('StorageProvider', () => {
   describe('#init', () => {
     it('should throw error if storage is undefined', (done) => {
       const init = () => {

@@ -16,7 +16,7 @@ const createStream = (filters) => {
   return new LogsApiStream(options);
 };
 
-describe.only('LogsApiStream', () => {
+describe('LogsApiStream', () => {
   describe('#init', () => {
     it('should throw error if options is undefined', (done) => {
       const init = () => {
