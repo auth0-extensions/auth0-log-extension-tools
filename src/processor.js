@@ -24,7 +24,7 @@ function LogsProcessor(storageContext, options) {
 LogsProcessor.prototype.hasTimeLeft = function(start) {
   const now = new Date().getTime();
   const limit = this.options.maxRunTimeSeconds;
-  return start + limit * 1000 >= now;
+  return start + (limit * 1000) >= now;
 };
 
 LogsProcessor.prototype.getLogFilter = function(options) {
@@ -60,7 +60,7 @@ LogsProcessor.prototype.createStream = function(options) {
 
 LogsProcessor.prototype.run = function(handler) {
   const self = this;
-  return new Promise((resolve, reject) => {
+  return new Promise(function(resolve, reject) {
     const start = new Date().getTime();
     var retries = 0;
     var lastLogDate = 0;
