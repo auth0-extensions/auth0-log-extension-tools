@@ -43,33 +43,35 @@ LogsApiStream.prototype.next = function(take) {
   const self = this;
   if (self.remaining < 1) {
     self.status.warning = 'Auth0 Management API rate limit reached.';
-    return self.done();
+    self.done();
+  } else {
+    const params = self.lastCheckpoint
+      ? { take: take || 100, from: self.lastCheckpoint }
+      : { per_page: take || 100, page: 0 };
+    params.q = self.getQuery(self.options.types);
+    params.sort = 'date:1';
+
+    self.client
+      .getLogs(params)
+      .then(function(data) {
+        const logs = data.logs;
+        self.remaining = data.limits.remaining;
+
+        if (logs && logs.length) {
+          self.lastCheckpoint = logs[logs.length - 1]._id;
+          self.lastBatch += logs.length;
+          self.push(data);
+        } else {
+          self.status.end = new Date();
+          self.push(null);
+        }
+
+        return logs;
+      })
+      .catch(function(err) {
+        self.emit('error', err);
+      });
   }
-
-  const params = self.lastCheckpoint
-    ? { take: take || 100, from: self.lastCheckpoint }
-    : { per_page: take || 100, page: 0 };
-  params.q = self.getQuery(self.options.types);
-  params.sort = 'date:1';
-
-  self.client
-    .getLogs(params)
-    .then(function(data) {
-      const logs = data.logs;
-      self.remaining = data.limits.remaining;
-
-      if (logs && logs.length) {
-        self.lastCheckpoint = logs[logs.length - 1]._id;
-        self.lastBatch += logs.length;
-        self.push(data);
-      } else {
-        self.status.end = new Date();
-        self.push(null);
-      }
-    })
-    .catch(function(err) {
-      self.emit('error', err);
-    });
 };
 
 LogsApiStream.prototype.batchSaved = function() {
