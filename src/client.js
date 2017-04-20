@@ -127,7 +127,23 @@ LogsApiClient.prototype.getLogs = function(params) {
           .set('Authorization', 'Bearer ' + data.token)
           .set('Content-Type', 'application/json')
           .end(function(err, res) {
-            // TODO: We might want to clear the cache of the access token if we get a 401.
+            if (err && err.status === 403) {
+              const returnError = function() {
+                return reject(
+                  new tools.ManagementApiError(
+                    res.body.error,
+                    res.body.error_description || res.body.error,
+                    err.status
+                  )
+                );
+              };
+
+              // Clear the cached token.
+              self.tokenCache.setToken(null)
+                .then(returnError)
+                .catch(returnError)
+            }
+
             if (err && res && res.body && res.body.error) {
               return reject(
                 new tools.ManagementApiError(
