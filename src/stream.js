@@ -52,7 +52,7 @@ LogsApiStream.prototype.next = function(take) {
   params.q = self.getQuery(self.options.types);
   params.sort = 'date:1';
 
-  return self.client
+  self.client
     .getLogs(params)
     .then(function(data) {
       const logs = data.logs;

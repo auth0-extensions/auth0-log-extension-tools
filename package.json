@@ -1,13 +1,13 @@
 {
   "name": "auth0-log-extension-tools",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A set of tools for logging",
   "main": "src/index.js",
   "dependencies": {
     "auth0-extension-tools": "^1.2.1",
-    "bluebird": "^3.4.7",
-    "lodash": "^4.17.4",
-    "superagent": "^3.5.0"
+    "bluebird": "3.4.6",
+    "lodash": "4.8.2",
+    "superagent": "1.2.0"
   },
   "devDependencies": {
     "autochecker": "^0.9.2",
