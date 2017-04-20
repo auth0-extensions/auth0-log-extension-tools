@@ -47,6 +47,11 @@ LogsProcessor.prototype.createStream = function(options) {
   return self.storage
     .getCheckpoint(options.startFrom)
     .then(function(startCheckpoint) {
+
+      if (self.options.logger) {
+        self.options.logger.debug('Starting logs processor from checkpoint:', startCheckpoint);
+      }
+
       return new LogsApiStream({
         checkpointId: startCheckpoint,
         types: self.getLogFilter(options),
@@ -66,11 +71,16 @@ LogsProcessor.prototype.run = function(handler) {
     var lastLogDate = 0;
     var logsBatch = [];
     const storage = self.storage;
+    const options = self.options;
     const batchSize = self.options.batchSize;
     const maxRetries = self.options.maxRetries;
 
     // Stop the run because it failed.
     const runFailed = function(error, status, checkpoint) {
+      if (self.options.logger) {
+        self.options.logger.debug('Processor failed:', error);
+      }
+
       status.error = error;
 
       storage
@@ -83,6 +93,10 @@ LogsProcessor.prototype.run = function(handler) {
 
     // The run ended successfully.
     const runSuccess = function(status, checkpoint) {
+      if (self.options.logger) {
+        self.options.logger.debug('Processor run complete. Logs processed:', status.logsProcessed);
+      }
+
       if (status.logsProcessed > 0) {
         const week = 604800000;
         const currentDate = new Date().getTime();
@@ -136,14 +150,24 @@ LogsProcessor.prototype.run = function(handler) {
         err
       ];
 
+      if (self.options.logger) {
+        self.options.logger.error(error[0], error[1]);
+      }
+
       // We're giving up.
       return runFailed(error, stream.status, stream.lastCheckpoint);
     };
 
     self.createStream(self.options)
       .then(function(stream) {
+        const nextLimit = getNextLimit();
+
+        if (self.options.logger) {
+          self.options.logger.debug('Loading next batch of logs. Next limit:', nextLimit);
+        }
+
         // Get the first batch.
-        stream.next(getNextLimit());
+        stream.next();
 
         // Process batch of logs.
         stream.on('data', function(data) {
