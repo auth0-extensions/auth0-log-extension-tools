@@ -167,7 +167,7 @@ LogsProcessor.prototype.run = function(handler) {
         }
 
         // Get the first batch.
-        stream.next();
+        stream.next(nextLimit);
 
         // Process batch of logs.
         stream.on('data', function(data) {
