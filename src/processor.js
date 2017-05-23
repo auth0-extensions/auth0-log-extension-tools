@@ -32,7 +32,7 @@ LogsProcessor.prototype.getLogFilter = function(options) {
   if (options.logLevel) {
     types = types.concat(
       _.keys(
-        _.filter(logTypes, function(type) {
+        _.pickBy(logTypes, function(type) {
           return type.level >= options.logLevel;
         })
       )
