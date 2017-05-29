@@ -30,7 +30,7 @@ module.exports.logs = (options = {}) =>
 
     for (let i = from + 1; i <= from + take; i++) {
       if (i <= 500) {
-        logs.push({ _id: '' + i, date: (options.outdated) ? new Date('1999-10-10') : new Date() });
+        logs.push({ _id: '' + i, date: (options.outdated) ? new Date('1999-10-10') : new Date(), type: options.type });
       }
     }
 

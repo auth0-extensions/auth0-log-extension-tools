@@ -46,8 +46,8 @@ LogsApiStream.prototype.next = function(take) {
     self.done();
   } else {
     const params = self.lastCheckpoint
-      ? { take: take || 100, from: self.lastCheckpoint }
-      : { per_page: take || 100, page: 0 };
+      ? { take: 100, from: self.lastCheckpoint }
+      : { per_page: 100, page: 0 };
     params.q = self.getQuery(self.options.types);
     params.sort = 'date:1';
 
@@ -58,9 +58,21 @@ LogsApiStream.prototype.next = function(take) {
         self.remaining = data.limits.remaining;
 
         if (logs && logs.length) {
-          self.lastCheckpoint = logs[logs.length - 1]._id;
-          self.lastBatch += logs.length;
-          self.push(data);
+          const filtered = (!self.options.types || !self.options.types.length)
+            ? logs
+            : logs.filter(function(log) {
+                return self.options.types.indexOf(log.type) >= 0;
+              }).slice(0, take || 100);
+
+          if (filtered.length) {
+            self.lastCheckpoint = filtered[filtered.length - 1]._id;
+            self.lastBatch += filtered.length;
+            self.push({ logs: filtered, limits: data.limits });
+          } else {
+            self.lastCheckpoint = logs[logs.length - 1]._id;
+            self.lastBatch += 0;
+            self.push({ logs: [], limits: data.limits });
+          }
         } else {
           self.status.end = new Date();
           self.push(null);
