@@ -1,6 +1,6 @@
 {
   "name": "auth0-log-extension-tools",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A set of tools for logging",
   "main": "src/index.js",
   "dependencies": {
