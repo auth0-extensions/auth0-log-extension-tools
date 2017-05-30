@@ -30,11 +30,18 @@ LogsProcessor.prototype.hasTimeLeft = function(start) {
 LogsProcessor.prototype.getLogFilter = function(options) {
   var types = options.logTypes || [];
   if (options.logLevel) {
+    const typesFromLevel = _.map(logTypes, function(data, type) {
+      const logType = data;
+      logType.type = type;
+      return logType;
+    });
+
     types = types.concat(
-      _.keys(
-        _.filter(logTypes, function(type) {
+      _.map(
+        _.filter(typesFromLevel, function(type) {
           return type.level >= options.logLevel;
-        })
+        }),
+        'type'
       )
     );
   }
@@ -179,7 +186,7 @@ LogsProcessor.prototype.run = function(handler) {
           }
 
           // TODO: At some point, even if the batch is too small, we need to ship the logs.
-          if (logsBatch.length < batchSize) {
+          if (logsBatch.length < batchSize && self.hasTimeLeft(start)) {
             return stream.next(getNextLimit());
           }
 

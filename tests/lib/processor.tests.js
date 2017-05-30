@@ -199,15 +199,32 @@ describe('LogsProcessor', () => {
         });
     });
 
-    it('should work with logLevel', (done) => {
-      helpers.mocks.logs({ times: 6 });
+    it('should work with logTypes', (done) => {
+      helpers.mocks.logs({ times: 1, type: 's' });
+      helpers.mocks.logs({ times: 1, type: 'ss' });
+      helpers.mocks.logs({ times: 4, type: 'ssa' });
 
-      const processor = createProcessor(null, { logLevel: 1 });
+      const processor = createProcessor(null, { logTypes: [ 's', 'ss' ] });
       processor.run((logs, cb) => cb())
         .then((result) => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
-          expect(result.status.logsProcessed).to.equal(500);
+          expect(result.status.logsProcessed).to.equal(200);
+          expect(result.checkpoint).to.equal('500');
+          done();
+        });
+    });
+
+    it('should work with logLevel', (done) => {
+      helpers.mocks.logs({ times: 3, type: 'fcpro' });
+      helpers.mocks.logs({ times: 3, type: 'ssa' });
+
+      const processor = createProcessor(null, { logLevel: 4 });
+      processor.run((logs, cb) => cb())
+        .then((result) => {
+          expect(result).to.be.an('object');
+          expect(result.status).to.be.an('object');
+          expect(result.status.logsProcessed).to.equal(300);
           expect(result.checkpoint).to.equal('500');
           done();
         });
