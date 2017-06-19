@@ -49,6 +49,45 @@ LogsProcessor.prototype.getLogFilter = function(options) {
   return _.uniq(types);
 };
 
+LogsProcessor.prototype.getReport = function(start, end) {
+  const startStamp = new Date(start).getTime();
+  const endStamp = (end) ? new Date(end).getTime() : new Date().getTime();
+
+  return this.storage.read()
+    .then(function(data) {
+      return _.filter(data.logs, function(log) {
+        const logStart = new Date(log.start).getTime();
+        const logEnd = new Date(log.end).getTime();
+
+        return (logStart >= startStamp && logEnd <= endStamp);
+      });
+    })
+    .then(function(logs) {
+      const result = {
+        type: 'report',
+        processed: 0,
+        warnings: 0,
+        errors: 0,
+        checkpoint: ''
+      };
+
+      _.each(logs, function(log) {
+        result.processed += log.logsProcessed;
+        result.checkpoint = log.checkpoint;
+
+        if (log.error) {
+          result.errors += 1;
+        }
+
+        if (log.warning) {
+          result.warnings += 1;
+        }
+      });
+
+      return result;
+    });
+};
+
 LogsProcessor.prototype.createStream = function(options) {
   const self = this;
   return self.storage
@@ -147,14 +186,14 @@ LogsProcessor.prototype.run = function(handler) {
       }
 
       const error = [
+        err,
         'Skipping logs from ' +
         stream.previousCheckpoint +
         ' to ' +
         stream.lastCheckpoint +
         ' after ' +
         maxRetries +
-        ' retries.',
-        err
+        ' retries.'
       ];
 
       if (self.options.logger) {
