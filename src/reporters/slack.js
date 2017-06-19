@@ -40,17 +40,11 @@ SlackReporter.prototype.createMessage = function(options, status, checkpoint) {
 
   const title = options.title || 'Auth0 Logger';
   const defaultText = (status.type === 'report') ? title + ' Report' : status.error ? title + ' Error' : title + ' Success';
-  const error = status.error ? status.error.message || status.error[0] || 'Error occurred' : null;
+  const error = status.error || null;
 
   const defaultTemplate = {
     fallback: options.fallback || defaultText,
     text: options.text || defaultText,
-    fields: [
-      { title: 'Start time', value: status.start, short: true },
-      { title: 'End time', value: status.end, short: true },
-      { title: 'Logs processed', value: status.logsProcessed, short: true },
-      { title: 'Last checkpoint', value: checkpoint, short: true }
-    ],
     error_field: { title: 'Error', value: JSON.stringify(error), short: false }
   };
 
@@ -59,14 +53,14 @@ SlackReporter.prototype.createMessage = function(options, status, checkpoint) {
       { title: 'Logs processed', value: status.processed, short: true },
       { title: 'Warnings', value: status.warnings, short: true },
       { title: 'Errors', value: status.errors, short: true },
-      { title: 'Last checkpoint', value: status.checkpoint, short: true }
+      { title: 'Next checkpoint', value: status.checkpoint, short: true }
     ];
   } else {
     defaultTemplate.fields = [
       { title: 'Start time', value: status.start, short: true },
       { title: 'End time', value: status.end, short: true },
       { title: 'Logs processed', value: status.logsProcessed, short: true },
-      { title: 'Last checkpoint', value: checkpoint, short: true }
+      { title: 'Next checkpoint', value: checkpoint, short: true }
     ];
   }
 
