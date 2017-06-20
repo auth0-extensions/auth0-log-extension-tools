@@ -39,20 +39,30 @@ SlackReporter.prototype.createMessage = function(options, status, checkpoint) {
   };
 
   const title = options.title || 'Auth0 Logger';
-  const defaultText = status.error ? title + ' Error' : title + ' Success';
-  const error = status.error ? status.error.message || status.error[0] || 'Error occurred' : null;
+  const defaultText = (status.type === 'report') ? title + ' Report' : status.error ? title + ' Error' : title + ' Success';
+  const error = status.error || null;
 
   const defaultTemplate = {
     fallback: options.fallback || defaultText,
     text: options.text || defaultText,
-    fields: [
+    error_field: { title: 'Error', value: JSON.stringify(error), short: false }
+  };
+
+  if (status.type === 'report') {
+    defaultTemplate.fields = [
+      { title: 'Logs processed', value: status.processed, short: true },
+      { title: 'Warnings', value: status.warnings, short: true },
+      { title: 'Errors', value: status.errors, short: true },
+      { title: 'Next checkpoint', value: status.checkpoint, short: true }
+    ];
+  } else {
+    defaultTemplate.fields = [
       { title: 'Start time', value: status.start, short: true },
       { title: 'End time', value: status.end, short: true },
       { title: 'Logs processed', value: status.logsProcessed, short: true },
-      { title: 'Last checkpoint', value: checkpoint, short: true }
-    ],
-    error_field: { title: 'Error', value: error, short: false }
-  };
+      { title: 'Next checkpoint', value: checkpoint, short: true }
+    ];
+  }
 
   const details = options.url ? ' (<' + options.url + '|Details>)' : null;
 
@@ -64,7 +74,7 @@ SlackReporter.prototype.createMessage = function(options, status, checkpoint) {
 
   // Todo: this should handle error colors/warning colors also.
   msg.attachments.push({
-    color: '#7CD197',
+    color: (status.error) ? '#d13f42' : '#7cd197',
     fallback: defaultTemplate.fallback,
     text: defaultTemplate.fallback + (details || ''),
     fields: fields

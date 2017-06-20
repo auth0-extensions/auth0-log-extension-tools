@@ -127,7 +127,7 @@ describe('LogsProcessor', () => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.error.length).to.be.equal(2);
-          expect(result.status.error[1]).to.be.an.instanceof(Error, /ERROR/);
+          expect(result.status.error[0]).to.be.an.instanceof(Error, /ERROR/);
           expect(result.status.logsProcessed).to.equal(0);
           expect(result.checkpoint).to.equal('100');
           done();
@@ -226,6 +226,56 @@ describe('LogsProcessor', () => {
           expect(result.status).to.be.an('object');
           expect(result.status.logsProcessed).to.equal(300);
           expect(result.checkpoint).to.equal('500');
+          done();
+        });
+    });
+
+    it('should return report', (done) => {
+      const data = {
+        logs: [
+          {
+            start: '2017-05-11T10:11:20.994Z',
+            end: null,
+            logsProcessed: 100,
+            checkpoint: 'should-not-be-included-first'
+          },
+          {
+            start: '2017-05-11T10:21:20.994Z',
+            end: null,
+            logsProcessed: 10,
+            error: 1,
+            checkpoint: '49570627966157796216769521870780578157584973688708530226'
+          },
+          {
+            start: '2017-05-11T10:32:41.220Z',
+            end: '2017-05-11T10:33:07.867Z',
+            logsProcessed: 20,
+            warning: 1,
+            checkpoint: '49570627966157796216769522202815681292201819640208293938'
+          },
+          {
+            start: '2017-05-11T10:42:41.220Z',
+            end: '2017-05-11T10:43:07.867Z',
+            logsProcessed: 120,
+            checkpoint: '49570627966157796216770346582398146766474360110828224562'
+          },
+          {
+            start: '2017-05-11T10:52:41.220Z',
+            end: '2017-05-11T10:53:07.867Z',
+            logsProcessed: 100,
+            checkpoint: 'should-not-be-included-last'
+          }
+        ]
+      };
+      const processor = createProcessor(data);
+
+      processor.getReport('2017-05-11T10:20:00.000Z', '2017-05-11T10:50:00.000Z')
+        .then((result) => {
+          expect(result).to.be.an('object');
+          expect(result.processed).to.equal(150);
+          expect(result.warnings).to.equal(1);
+          expect(result.errors).to.equal(1);
+          expect(result.checkpoint).to.equal('49570627966157796216770346582398146766474360110828224562');
           done();
         });
     });
