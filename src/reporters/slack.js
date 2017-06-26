@@ -39,7 +39,7 @@ SlackReporter.prototype.createMessage = function(options, status, checkpoint) {
   };
 
   const title = options.title || 'Auth0 Logger';
-  const defaultText = (status.type === 'report') ? title + ' Report' : status.error ? title + ' Error' : title + ' Success';
+  const defaultText = (status.type === 'report') ? title + ' Daily Report' : status.error ? title + ' Error' : title + ' Success';
   const error = status.error || null;
 
   const defaultTemplate = {
