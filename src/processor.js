@@ -100,7 +100,7 @@ LogsProcessor.prototype.createStream = function(options) {
       return new LogsApiStream({
         checkpointId: startCheckpoint,
         types: self.getLogFilter(options),
-        serversideFiltering: options.serversideFiltering,
+        enableServerSideFiltering: options.enableServerSideFiltering,
         domain: options.domain,
         clientId: options.clientId,
         clientSecret: options.clientSecret,

@@ -36,6 +36,7 @@ describe('LogsApiStream', () => {
 
   describe('#stream', () => {
     beforeEach((done) => {
+      helpers.mocks.clear();
       helpers.mocks.token();
       done();
     });
@@ -73,7 +74,7 @@ describe('LogsApiStream', () => {
       logger.next();
     });
 
-    it('should done reading logs, if no more logs can be fount', (done) => {
+    it('should done reading logs, if no more logs can be found', (done) => {
       helpers.mocks.logs();
       helpers.mocks.logs({ empty: true });
 

@@ -45,7 +45,8 @@ LogsApiStream.prototype.next = function(take) {
     self.status.warning = 'Auth0 Management API rate limit reached.';
     self.done();
   } else {
-    const limit = !self.options.serversideFiltering ? 100 : take || 100;
+    const serverFiltering = self.options.enableServerSideFiltering || false;
+    const limit = !serverFiltering ? 100 : take || 100;
     const params = self.lastCheckpoint
       ? { take: limit, from: self.lastCheckpoint }
       : { per_page: limit, page: 0 };
@@ -59,7 +60,7 @@ LogsApiStream.prototype.next = function(take) {
         self.remaining = data.limits.remaining;
 
         if (logs && logs.length) {
-          const filtered = (self.options.serversideFiltering || !self.options.types || !self.options.types.length)
+          const filtered = (serverFiltering || !self.options.types || !self.options.types.length)
             ? logs
             : logs.filter(function(log) {
               return self.options.types.indexOf(log.type) >= 0;
