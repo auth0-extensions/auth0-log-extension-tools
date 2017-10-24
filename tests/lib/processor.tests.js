@@ -55,6 +55,7 @@ describe('LogsProcessor', () => {
 
   describe('#run', () => {
     beforeEach((done) => {
+      helpers.mocks.clear();
       helpers.mocks.token();
       done();
     });
@@ -199,10 +200,10 @@ describe('LogsProcessor', () => {
         });
     });
 
-    it('should work with logTypes', (done) => {
+    it('should filter logs if enableServerSideFiltering is disabled', (done) => {
       helpers.mocks.logs({ times: 1, type: 's' });
       helpers.mocks.logs({ times: 1, type: 'ss' });
-      helpers.mocks.logs({ times: 4, type: 'ssa' });
+      helpers.mocks.logs({ times: 1, type: 'ssa' });
 
       const processor = createProcessor(null, { logTypes: [ 's', 'ss' ] });
       processor.run((logs, cb) => cb())
@@ -210,7 +211,25 @@ describe('LogsProcessor', () => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.logsProcessed).to.equal(200);
-          expect(result.checkpoint).to.equal('500');
+          expect(result.checkpoint).to.equal('200');
+          done();
+        });
+    });
+
+    it('should request filtered logs if enableServerSideFiltering is enabled', (done) => {
+      let logTypesRequested = null;
+      helpers.mocks.logs({ times: 1, type: 's' }, (requestData) => {
+        logTypesRequested = requestData.logTypes;
+      });
+
+      const processor = createProcessor(null, { logTypes: [ 's', 'ss' ], enableServerSideFiltering: true });
+      processor.run((logs, cb) => cb())
+        .then((result) => {
+          expect(result).to.be.an('object');
+          expect(result.status).to.be.an('object');
+          expect(result.status.logsProcessed).to.equal(100);
+          expect(logTypesRequested).to.deep.equal([ 's', 'ss' ]);
+          expect(result.checkpoint).to.equal('100');
           done();
         });
     });
@@ -225,7 +244,7 @@ describe('LogsProcessor', () => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.logsProcessed).to.equal(300);
-          expect(result.checkpoint).to.equal('500');
+          expect(result.checkpoint).to.equal('300');
           done();
         });
     });

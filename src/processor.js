@@ -93,7 +93,6 @@ LogsProcessor.prototype.createStream = function(options) {
   return self.storage
     .getCheckpoint(options.startFrom)
     .then(function(startCheckpoint) {
-
       if (self.options.logger) {
         self.options.logger.debug('Starting logs processor from checkpoint:', startCheckpoint);
       }
@@ -101,6 +100,7 @@ LogsProcessor.prototype.createStream = function(options) {
       return new LogsApiStream({
         checkpointId: startCheckpoint,
         types: self.getLogFilter(options),
+        enableServerSideFiltering: options.enableServerSideFiltering,
         domain: options.domain,
         clientId: options.clientId,
         clientSecret: options.clientSecret,

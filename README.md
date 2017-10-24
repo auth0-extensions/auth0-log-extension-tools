@@ -9,6 +9,7 @@ const client = new LogsApiClient({
   domain: config('AUTH0_DOMAIN'),
   clientId: config('AUTH0_CLIENT_ID'),
   clientSecret: config('AUTH0_CLIENT_SECRET'),
+  enableServerSideFiltering: config('AUTH0_RTA').replace('https://', '') === 'auth0.auth0.com',
   tokenCache: myTokenCache
 });
 
@@ -44,7 +45,8 @@ const stream = new LogsApiStream({
   clientSecret: config('AUTH0_CLIENT_SECRET'),
   tokenCache: myTokenCache,
   checkpointId: startCheckpoint,
-  types: [ 'ss', 'fn' ]
+  types: [ 'ss', 'fn' ],
+  enableServerSideFiltering: true
 });
 
 // Get the first batch of 50 items.

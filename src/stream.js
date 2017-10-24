@@ -45,9 +45,11 @@ LogsApiStream.prototype.next = function(take) {
     self.status.warning = 'Auth0 Management API rate limit reached.';
     self.done();
   } else {
+    const serverFiltering = self.options.enableServerSideFiltering || false;
+    const limit = !serverFiltering ? 100 : take || 100;
     const params = self.lastCheckpoint
-      ? { take: 100, from: self.lastCheckpoint }
-      : { per_page: 100, page: 0 };
+      ? { take: limit, from: self.lastCheckpoint }
+      : { per_page: limit, page: 0 };
     params.q = self.getQuery(self.options.types);
     params.sort = 'date:1';
 
@@ -58,11 +60,11 @@ LogsApiStream.prototype.next = function(take) {
         self.remaining = data.limits.remaining;
 
         if (logs && logs.length) {
-          const filtered = (!self.options.types || !self.options.types.length)
+          const filtered = (serverFiltering || !self.options.types || !self.options.types.length)
             ? logs
             : logs.filter(function(log) {
-                return self.options.types.indexOf(log.type) >= 0;
-              }).slice(0, take || 100);
+              return self.options.types.indexOf(log.type) >= 0;
+            }).slice(0, take || 100);
 
           if (filtered.length) {
             self.lastCheckpoint = filtered[filtered.length - 1]._id;
