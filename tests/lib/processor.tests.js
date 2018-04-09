@@ -24,18 +24,14 @@ const createProcessor = (data, settings) => {
 describe('LogsProcessor', () => {
   describe('#init', () => {
     it('should throw error if the storageContext is undefined', (done) => {
-      const init = () => {
-        const processor = new LogsProcessor();
-      };
+      const init = () => new LogsProcessor();
 
       expect(init).to.throw(tools.ArgumentError);
       done();
     });
 
     it('should throw error if the options are undefined', (done) => {
-      const init = () => {
-        const processor = new LogsProcessor({ });
-      };
+      const init = () => new LogsProcessor({});
 
       expect(init).to.throw(tools.ArgumentError);
       done();
@@ -139,7 +135,7 @@ describe('LogsProcessor', () => {
 
       let logsReceivedRuns = 0;
       const onLogsReceived = (logs, cb) => setTimeout(() => {
-        logsReceivedRuns++;
+        logsReceivedRuns += 1;
         return cb();
       });
 
