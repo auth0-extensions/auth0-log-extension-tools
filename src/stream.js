@@ -41,13 +41,14 @@ LogsApiStream.prototype.done = function() {
 
 LogsApiStream.prototype.next = function(take) {
   const self = this;
+  const perPage = (!self.options.types || !self.options.types.length) ? take : 100;
   if (self.remaining < 1) {
     self.status.warning = 'Auth0 Management API rate limit reached.';
     self.done();
   } else {
     const params = self.lastCheckpoint
-      ? { take: 100, from: self.lastCheckpoint }
-      : { per_page: 100, page: 0 };
+      ? { take: perPage, from: self.lastCheckpoint }
+      : { per_page: perPage, page: 0 };
     params.q = self.getQuery(self.options.types);
     params.sort = 'date:1';
 
