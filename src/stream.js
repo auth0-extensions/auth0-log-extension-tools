@@ -59,11 +59,12 @@ LogsApiStream.prototype.next = function(take) {
         self.remaining = data.limits.remaining;
 
         if (logs && logs.length) {
-          const filtered = (!self.options.types || !self.options.types.length)
-            ? logs
-            : logs.filter(function(log) {
-                return self.options.types.indexOf(log.type) >= 0;
-              }).slice(0, take || 100);
+          let filtered = logs;
+          if (self.options.types && self.options.types.length) {
+            filtered = logs.filter(function(log) {
+              return self.options.types.indexOf(log.type) >= 0;
+            }).slice(0, take || 100);
+          }
 
           if (filtered.length) {
             self.lastCheckpoint = filtered[filtered.length - 1]._id;

@@ -93,9 +93,8 @@ LogsProcessor.prototype.createStream = function(options) {
   return self.storage
     .getCheckpoint(options.startFrom)
     .then(function(startCheckpoint) {
-
-      if (self.options.logger) {
-        self.options.logger.debug('Starting logs processor from checkpoint:', startCheckpoint);
+      if (options.logger) {
+        options.logger.debug('Starting logs processor from checkpoint:', startCheckpoint);
       }
 
       return new LogsApiStream({
@@ -118,13 +117,13 @@ LogsProcessor.prototype.run = function(handler) {
     var logsBatch = [];
     const storage = self.storage;
     const options = self.options;
-    const batchSize = self.options.batchSize;
-    const maxRetries = self.options.maxRetries;
+    const batchSize = options.batchSize;
+    const maxRetries = options.maxRetries;
 
     // Stop the run because it failed.
     const runFailed = function(error, status, checkpoint) {
-      if (self.options.logger) {
-        self.options.logger.debug('Processor failed:', error);
+      if (options.logger) {
+        options.logger.debug('Processor failed:', error);
       }
 
       status.error = error;
@@ -139,8 +138,8 @@ LogsProcessor.prototype.run = function(handler) {
 
     // The run ended successfully.
     const runSuccess = function(status, checkpoint) {
-      if (self.options.logger) {
-        self.options.logger.debug('Processor run complete. Logs processed:', status.logsProcessed);
+      if (options.logger) {
+        options.logger.debug('Processor run complete. Logs processed:', status.logsProcessed);
       }
 
       if (status.logsProcessed > 0) {
@@ -196,20 +195,20 @@ LogsProcessor.prototype.run = function(handler) {
         ' retries.'
       ];
 
-      if (self.options.logger) {
-        self.options.logger.error(error[0], error[1]);
+      if (options.logger) {
+        options.logger.error(error[0], error[1]);
       }
 
       // We're giving up.
       return runFailed(error, stream.status, stream.lastCheckpoint);
     };
 
-    self.createStream(self.options)
+    self.createStream(options)
       .then(function(stream) {
         const nextLimit = getNextLimit();
 
-        if (self.options.logger) {
-          self.options.logger.debug('Loading next batch of logs. Next limit:', nextLimit);
+        if (options.logger) {
+          options.logger.debug('Loading next batch of logs. Next limit:', nextLimit);
         }
 
         // Get the first batch.

@@ -141,7 +141,7 @@ LogsApiClient.prototype.getLogs = function(params) {
               // Clear the cached token.
               self.tokenCache.setToken(null)
                 .then(returnError)
-                .catch(returnError)
+                .catch(returnError);
             }
 
             if (err && res && res.body && res.body.error) {

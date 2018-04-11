@@ -8,9 +8,7 @@ const LogsApiClient = require('../../src/client');
 describe('LogsApiClient', () => {
   describe('#init', () => {
     it('should throw error if options is undefined', (done) => {
-      const init = () => {
-        const client = new LogsApiClient();
-      };
+      const init = () => new LogsApiClient();
 
       expect(init).to.throw(tools.ArgumentError, /Must provide an options object/);
       done();
@@ -18,43 +16,43 @@ describe('LogsApiClient', () => {
 
     it('should validate options', (done) => {
       try {
-        const client = new LogsApiClient();
+        LogsApiClient();
       } catch (err) {
         expect(err).to.be.an.instanceof(tools.ArgumentError);
       }
 
       try {
-        const client = new LogsApiClient({ });
+        LogsApiClient({});
       } catch (err) {
         expect(err).to.be.an.instanceof(tools.ArgumentError);
       }
 
       try {
-        const client = new LogsApiClient({ domain: 1 });
+        LogsApiClient({ domain: 1 });
       } catch (err) {
         expect(err).to.be.an.instanceof(tools.ArgumentError);
       }
 
       try {
-        const client = new LogsApiClient({ domain: 'foo' });
+        LogsApiClient({ domain: 'foo' });
       } catch (err) {
         expect(err).to.be.an.instanceof(tools.ArgumentError);
       }
 
       try {
-        const client = new LogsApiClient({ domain: 'foo', clientId: 123 });
+        LogsApiClient({ domain: 'foo', clientId: 123 });
       } catch (err) {
         expect(err).to.be.an.instanceof(tools.ArgumentError);
       }
 
       try {
-        const client = new LogsApiClient({ domain: 'foo', clientId: 'abc' });
+        LogsApiClient({ domain: 'foo', clientId: 'abc' });
       } catch (err) {
         expect(err).to.be.an.instanceof(tools.ArgumentError);
       }
 
       try {
-        const client = new LogsApiClient({ domain: 'foo', clientId: 'abc', clientSecret: 456 });
+        LogsApiClient({ domain: 'foo', clientId: 'abc', clientSecret: 456 });
       } catch (err) {
         expect(err).to.be.an.instanceof(tools.ArgumentError);
       }
@@ -149,7 +147,7 @@ describe('LogsApiClient', () => {
       client.getAccessToken()
         .then(function(res) {
           expect(res.token).to.equal('abc');
-          expect(res.expiresAt).to.be.an.number;
+          expect(res.expiresAt).to.be.a.number;
           done();
         });
     });

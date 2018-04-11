@@ -14,7 +14,7 @@ module.exports.logs = (options = {}) =>
   .get('/api/v2/logs')
   .query(() => true)
   .times(options.times || 1)
-  .reply(function(uri, requestBody) {
+  .reply(function(uri) {
     if (options.error) {
       return [ 400, options.error ];
     }
@@ -25,10 +25,10 @@ module.exports.logs = (options = {}) =>
 
     const query = querystring.parse(uri);
     const logs = [];
-    const from = (query.from) ? parseInt(query.from) : 0;
-    const take = (query.take) ? parseInt(query.take) : 100;
+    const from = (query.from) ? parseInt(query.from, 10) : 0;
+    const take = (query.take) ? parseInt(query.take, 10) : 100;
 
-    for (let i = from + 1; i <= from + take; i++) {
+    for (let i = from + 1; i <= from + take; i += 1) {
       if (i <= 500) {
         logs.push({ _id: '' + i, date: (options.outdated) ? new Date('1999-10-10') : new Date(), type: options.type });
       }
