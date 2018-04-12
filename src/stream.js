@@ -59,7 +59,7 @@ LogsApiStream.prototype.next = function(take) {
         self.remaining = data.limits.remaining;
 
         if (logs && logs.length) {
-          let filtered = logs;
+          var filtered = logs;
           if (self.options.types && self.options.types.length) {
             filtered = logs.filter(function(log) {
               return self.options.types.indexOf(log.type) >= 0;
