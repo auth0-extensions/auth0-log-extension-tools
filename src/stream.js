@@ -49,8 +49,11 @@ LogsApiStream.prototype.next = function(take) {
     const params = self.lastCheckpoint
       ? { take: perPage, from: self.lastCheckpoint }
       : { per_page: perPage, page: 0 };
-    params.q = self.getQuery(self.options.types);
     params.sort = 'date:1';
+
+    if (self.options.apiFiltering) {
+      params.q = self.getQuery(self.options.types);
+    }
 
     self.client
       .getLogs(params)
