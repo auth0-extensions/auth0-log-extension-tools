@@ -108,3 +108,47 @@ processor
   .then(status => console.log(status))
   .catch(err => console.log(err));
 ```
+
+## Route
+
+Prepared route for cron, requires `storage` and `options`
+
+ - `onLogsReceived`: function (logs, cb) - use to send logs somewhere
+ - `maxBatchSize`: Maximal batch size allowed
+ - `batchSize`: Size of the batch we'll make available in the handler
+ - `startFrom`: The Auth0 Log identifier to start from
+ - `logTypes`: An array of log types to filter on
+ - `logLevel`: The log level to filter on (0 = debug, 1 = info, 2 = warning, 3 = error, 4 = critical)
+ - `domain`: Auth0 Domain
+ - `clientId`: Auth0 Client Id
+ - `clientSecret`: Auth0 Client Secret
+ - `slackWebhook`: Slack Webhook Url
+ - `extensionName`: Extension Name for reports
+ - `extensionTitle`: Extension Title for reports
+ - `sendSuccess`: This setting will enable verbose notifications to Slack which are useful for troubleshooting
+
+```js
+const route = new Route(storage, {
+  domain: config('AUTH0_DOMAIN'),
+  clientId: config('AUTH0_CLIENT_ID'),
+  clientSecret: config('AUTH0_CLIENT_SECRET'),
+  batchSize: config('BATCH_SIZE'),
+  startFrom: config('START_FROM'),
+  logTypes: [ 'ss', 'fn' ],
+  logLevel: config('LOG_LEVEL'),
+  slackWebhook: config('SLACK_INCOMING_WEBHOOK_URL'),
+  extensionName: 'auth0-logs-to-somewhere',
+  extensionTitle: 'Logs To Somewhere Extension',
+  onLogsReceived: function(logs, cb) => {
+                    sendLogsSomewhere(function(err, result) {
+                      if (err) {
+                        return cb(err);
+                      }
+
+                      cb();
+                    });
+                  })
+});
+
+app.use(route);
+```
