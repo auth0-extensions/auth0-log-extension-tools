@@ -128,7 +128,9 @@ Prepared route for cron, requires `storage` and `options`
  - `sendSuccess`: This setting will enable verbose notifications to Slack which are useful for troubleshooting
 
 ```js
-const route = new Route(storage, {
+const { Route } = require('auth0-log-extension-tools');
+
+app.use(Route(storage, {
   domain: config('AUTH0_DOMAIN'),
   clientId: config('AUTH0_CLIENT_ID'),
   clientSecret: config('AUTH0_CLIENT_SECRET'),
@@ -139,16 +141,14 @@ const route = new Route(storage, {
   slackWebhook: config('SLACK_INCOMING_WEBHOOK_URL'),
   extensionName: 'auth0-logs-to-somewhere',
   extensionTitle: 'Logs To Somewhere Extension',
-  onLogsReceived: function(logs, cb) => {
-                    sendLogsSomewhere(function(err, result) {
-                      if (err) {
-                        return cb(err);
-                      }
+  onLogsReceived: function(logs, cb) =>
+    sendLogsSomewhere(function(err, result) {
+      if (err) {
+        return cb(err);
+      }
 
-                      cb();
-                    });
-                  })
-});
-
-app.use(route);
+      cb();
+    })
+  })
+);
 ```
