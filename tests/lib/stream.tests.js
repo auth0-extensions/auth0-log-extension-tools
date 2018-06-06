@@ -8,6 +8,7 @@ const LogsApiStream = require('../../src/stream');
 const createStream = (filters) => {
   const options = {
     types: filters,
+    maxRetries: 2,
     domain: 'foo.auth0.local',
     clientId: '1',
     clientSecret: 'secret',
@@ -73,6 +74,26 @@ describe('LogsApiStream', () => {
       logger.next();
     });
 
+    it('should retry reading logs', (done) => {
+      helpers.mocks.logs({ error: 'testing retry' });
+      helpers.mocks.logs();
+
+      const logger = createStream();
+      logger.on('data', () => {
+        logger.done();
+      });
+
+      logger.on('end', () => {
+        logger.batchSaved();
+        expect(logger.status).to.be.an('object');
+        expect(logger.status.logsProcessed).to.equal(100);
+        expect(logger.lastCheckpoint).to.equal('100');
+        done();
+      });
+
+      logger.next();
+    });
+
     it('should done reading logs, if no more logs can be fount', (done) => {
       helpers.mocks.logs();
       helpers.mocks.logs({ empty: true });
@@ -108,7 +129,7 @@ describe('LogsApiStream', () => {
     });
 
     it('should emit errors correctly', (done) => {
-      helpers.mocks.logs({ error: 'bad request' });
+      helpers.mocks.logs({ error: 'bad request', times: 3 });
 
       const logger = createStream({ types: [ 'test' ] });
       logger.on('data', () => logger.next());

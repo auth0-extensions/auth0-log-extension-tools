@@ -15,7 +15,7 @@ function LogsProcessor(storageContext, options) {
     {
       batchSize: 100,
       maxRetries: 5,
-      maxRunTimeSeconds: 20
+      maxRunTimeSeconds: 40
     },
     options
   );
@@ -100,6 +100,7 @@ LogsProcessor.prototype.createStream = function(options) {
       return new LogsApiStream({
         checkpointId: startCheckpoint,
         types: self.getLogFilter(options),
+        maxRetries: options.maxRetries,
         domain: options.domain,
         clientId: options.clientId,
         clientSecret: options.clientSecret,
