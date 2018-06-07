@@ -10,7 +10,7 @@ const createStream = (filters) => {
     types: filters,
     start: new Date().getTime(),
     maxRetries: 2,
-    maxRunTimeSeconds: 5,
+    maxRunTimeSeconds: 1,
     domain: 'foo.auth0.local',
     clientId: '1',
     clientSecret: 'secret',
@@ -130,10 +130,8 @@ describe('LogsApiStream', () => {
       logger.next();
     });
 
-    it('should emit error if no time left', function(done) {
-      this.timeout(6000);
-
-      helpers.mocks.logs({ error: 'time is up', delay: 5000 });
+    it('should emit error if no time left', (done) => {
+      helpers.mocks.logs({ error: 'time is up', delay: 1000 });
 
       const logger = createStream();
       logger.on('data', () => logger.next());
