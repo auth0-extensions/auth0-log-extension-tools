@@ -15,6 +15,7 @@ function LogsApiStream(options) {
   this.options = options;
   this.remaining = 50;
   this.lastBatch = 0;
+  this.retries = 0;
   this.previousCheckpoint = options.checkpointId || null;
   this.lastCheckpoint = options.checkpointId || null;
   this.status = {
@@ -52,39 +53,53 @@ LogsApiStream.prototype.next = function(take) {
     params.q = self.getQuery(self.options.types);
     params.sort = 'date:1';
 
-    self.client
-      .getLogs(params)
-      .then(function(data) {
-        const logs = data.logs;
-        self.remaining = data.limits.remaining;
+    const getLogs = function() {
+      self.client
+        .getLogs(params)
+        .then(function(data) {
+          const logs = data.logs;
+          self.remaining = data.limits.remaining;
 
-        if (logs && logs.length) {
-          var filtered = logs;
-          if (self.options.types && self.options.types.length) {
-            filtered = logs.filter(function(log) {
-              return self.options.types.indexOf(log.type) >= 0;
-            }).slice(0, take || 100);
-          }
+          if (logs && logs.length) {
+            var filtered = logs;
+            if (self.options.types && self.options.types.length) {
+              filtered = logs.filter(function(log) {
+                return self.options.types.indexOf(log.type) >= 0;
+              }).slice(0, take || 100);
+            }
 
-          if (filtered.length) {
-            self.lastCheckpoint = filtered[filtered.length - 1]._id;
-            self.lastBatch += filtered.length;
-            self.push({ logs: filtered, limits: data.limits });
+            if (filtered.length) {
+              self.lastCheckpoint = filtered[filtered.length - 1]._id;
+              self.lastBatch += filtered.length;
+              self.push({ logs: filtered, limits: data.limits });
+            } else {
+              self.lastCheckpoint = logs[logs.length - 1]._id;
+              self.lastBatch += 0;
+              self.push({ logs: [], limits: data.limits });
+            }
           } else {
-            self.lastCheckpoint = logs[logs.length - 1]._id;
-            self.lastBatch += 0;
-            self.push({ logs: [], limits: data.limits });
+            self.status.end = new Date();
+            self.push(null);
           }
-        } else {
-          self.status.end = new Date();
-          self.push(null);
-        }
 
-        return logs;
-      })
-      .catch(function(err) {
-        self.emit('error', err);
-      });
+          return logs;
+        })
+        .catch(function(err) {
+          const start = self.options.start;
+          const limit = self.options.maxRunTimeSeconds;
+          const now = new Date().getTime();
+          const hasTime = start + (limit * 1000) >= now;
+
+          if (self.options.maxRetries > self.retries && hasTime) {
+            self.retries++;
+            return getLogs();
+          }
+
+          return self.emit('error', err);
+        });
+    };
+
+    getLogs();
   }
 };
 

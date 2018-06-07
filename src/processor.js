@@ -10,12 +10,13 @@ function LogsProcessor(storageContext, options) {
     throw new tools.ArgumentError('Must provide an options object');
   }
 
+  this.start = new Date().getTime();
   this.storage = new StorageProvider(storageContext);
   this.options = _.assign({ },
     {
       batchSize: 100,
       maxRetries: 5,
-      maxRunTimeSeconds: 20
+      maxRunTimeSeconds: 28
     },
     options
   );
@@ -100,6 +101,9 @@ LogsProcessor.prototype.createStream = function(options) {
       return new LogsApiStream({
         checkpointId: startCheckpoint,
         types: self.getLogFilter(options),
+        start: self.start,
+        maxRetries: options.maxRetries,
+        maxRunTimeSeconds: options.maxRunTimeSeconds,
         domain: options.domain,
         clientId: options.clientId,
         clientSecret: options.clientSecret,
@@ -111,7 +115,7 @@ LogsProcessor.prototype.createStream = function(options) {
 LogsProcessor.prototype.run = function(handler) {
   const self = this;
   return new Promise(function(resolve, reject) {
-    const start = new Date().getTime();
+    const start = self.start;
     var retries = 0;
     var lastLogDate = 0;
     var logsBatch = [];
