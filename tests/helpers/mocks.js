@@ -13,6 +13,7 @@ module.exports.logs = (options = {}) =>
    })
   .get('/api/v2/logs')
   .query(() => true)
+  .delay(options.delay || 0)
   .times(options.times || 1)
   .reply(function(uri) {
     if (options.error) {

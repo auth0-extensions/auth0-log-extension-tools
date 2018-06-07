@@ -85,7 +85,12 @@ LogsApiStream.prototype.next = function(take) {
           return logs;
         })
         .catch(function(err) {
-          if (self.options.maxRetries > self.retries) {
+          const start = self.options.start;
+          const limit = self.options.maxRunTimeSeconds;
+          const now = new Date().getTime();
+          const hasTime = start + (limit * 1000) >= now;
+
+          if (self.options.maxRetries > self.retries && hasTime) {
             self.retries++;
             return getLogs();
           }

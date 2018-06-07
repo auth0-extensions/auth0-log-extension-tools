@@ -8,7 +8,9 @@ const LogsApiStream = require('../../src/stream');
 const createStream = (filters) => {
   const options = {
     types: filters,
+    start: new Date().getTime(),
     maxRetries: 2,
+    maxRunTimeSeconds: 5,
     domain: 'foo.auth0.local',
     clientId: '1',
     clientSecret: 'secret',
@@ -122,6 +124,21 @@ describe('LogsApiStream', () => {
         expect(logger.status.logsProcessed).to.equal(100);
         expect(logger.status.warning).to.equal('Auth0 Management API rate limit reached.');
         expect(logger.lastCheckpoint).to.equal('100');
+        done();
+      });
+
+      logger.next();
+    });
+
+    it('should emit error if no time left', function(done) {
+      this.timeout(6000);
+
+      helpers.mocks.logs({ error: 'time is up', delay: 5000 });
+
+      const logger = createStream();
+      logger.on('data', () => logger.next());
+      logger.on('error', (error) => {
+        expect(error.response.text).to.equal('time is up');
         done();
       });
 
