@@ -121,14 +121,32 @@ LogsApiClient.prototype.getLogs = function(params) {
   return new Promise(function(resolve, reject) {
     self.getAccessTokenCached(self.options, self.storage)
       .then(function(data) {
-        const query = querystring.stringify(params);
-        request
-          .get('https://' + self.options.domain + '/api/v2/logs?' + query)
-          .set('Authorization', 'Bearer ' + data.token)
-          .set('Content-Type', 'application/json')
-          .end(function(err, res) {
-            if (err && err.status === 403) {
-              const returnError = function() {
+        const jitter = Math.floor(Math.random() * 150000);
+        setTimeout(function() {
+          const query = querystring.stringify(params);
+          request
+            .get('https://' + self.options.domain + '/api/v2/logs?' + query)
+            .set('Authorization', 'Bearer ' + data.token)
+            .set('Content-Type', 'application/json')
+            .end(function(err, res) {
+              if (err && err.status === 403) {
+                const returnError = function() {
+                  return reject(
+                    new tools.ManagementApiError(
+                      res.body.error,
+                      res.body.error_description || res.body.error,
+                      err.status
+                    )
+                  );
+                };
+
+                // Clear the cached token.
+                self.tokenCache.setToken(null)
+                  .then(returnError)
+                  .catch(returnError);
+              }
+
+              if (err && res && res.body && res.body.error) {
                 return reject(
                   new tools.ManagementApiError(
                     res.body.error,
@@ -136,47 +154,32 @@ LogsApiClient.prototype.getLogs = function(params) {
                     err.status
                   )
                 );
-              };
-
-              // Clear the cached token.
-              self.tokenCache.setToken(null)
-                .then(returnError)
-                .catch(returnError);
-            }
-
-            if (err && res && res.body && res.body.error) {
-              return reject(
-                new tools.ManagementApiError(
-                  res.body.error,
-                  res.body.error_description || res.body.error,
-                  err.status
-                )
-              );
-            }
-
-            if (err) {
-              return reject(err);
-            }
-
-            if (!res.ok) {
-              return reject(
-                new tools.ManagementApiError(
-                  'unknown_error',
-                  'Unknown error from Management API: ' +
-                    (res.text || res.status)
-                )
-              );
-            }
-
-            return resolve({
-              logs: res.body,
-              limits: {
-                limit: res.headers['x-ratelimit-limit'],
-                remaining: res.headers['x-ratelimit-remaining'],
-                reset: res.headers['x-ratelimit-reset']
               }
+
+              if (err) {
+                return reject(err);
+              }
+
+              if (!res.ok) {
+                return reject(
+                  new tools.ManagementApiError(
+                    'unknown_error',
+                    'Unknown error from Management API: ' +
+                      (res.text || res.status)
+                  )
+                );
+              }
+
+              return resolve({
+                logs: res.body,
+                limits: {
+                  limit: res.headers['x-ratelimit-limit'],
+                  remaining: res.headers['x-ratelimit-remaining'],
+                  reset: res.headers['x-ratelimit-reset']
+                }
+              });
             });
-          });
+        }, jitter);
       });
   });
 };
