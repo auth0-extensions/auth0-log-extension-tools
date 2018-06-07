@@ -16,7 +16,7 @@ function LogsProcessor(storageContext, options) {
     {
       batchSize: 100,
       maxRetries: 5,
-      maxRunTimeSeconds: 20
+      maxRunTimeSeconds: 28
     },
     options
   );
