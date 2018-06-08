@@ -315,6 +315,7 @@ LogsProcessor.prototype.run = function(handler) {
             options.logger.info(`Hit timeoutSeconds (${options.timeoutSeconds} seconds)`);
           }
 
+          stream.done();
           handleEnd();
           timedOut = true;
         });

@@ -1,4 +1,7 @@
+'use strict';
+
 const _ = require('lodash');
+const Promise = require('bluebird');
 
 const expect = require('chai').expect;
 const tools = require('auth0-extension-tools');
@@ -7,7 +10,7 @@ const helpers = require('../helpers');
 const LogsProcessor = require('../../src/processor');
 const webtaskStorage = require('../helpers/webtaskStorage');
 
-const createProcessor = (data, settings) => {
+const createProcessor = (data, settings, storage) => {
   const options = _.assign({ },
     {
       domain: 'foo.auth0.local',
@@ -19,7 +22,7 @@ const createProcessor = (data, settings) => {
     settings
   );
 
-  const storage = webtaskStorage(data);
+  storage = storage || webtaskStorage(data);
   return new LogsProcessor(webtaskStorage.context(storage), options);
 };
 
@@ -228,6 +231,26 @@ describe('LogsProcessor', () => {
           expect(result.checkpoint).to.equal('100');
         });
     });
+
+    it('should correctly update storage when timeoutSeconds hit', () => {
+      helpers.mocks.logs();
+      helpers.mocks.logs({ delay: 10000 });
+
+      const storage = webtaskStorage();
+      const getAsync = Promise.promisify(storage.get);
+
+      const processor = createProcessor(null, null, storage);
+      return processor.run((logs, cb) => setTimeout(() => cb()))
+        .then(() => getAsync())
+        .then((storageState) => {
+          expect(storageState.checkpointId).to.equal('100');
+          expect(storageState.logs[0].logsProcessed).to.equal(100);
+          expect(storageState.logs[0].checkpoint).to.equal('100');
+          expect(storageState.logs[0].start).to.be.an.instanceof(Date);
+          expect(storageState.logs[0].end).to.be.an.instanceof(Date);
+        });
+    });
+
 
     it('should return report', () => {
       const data = {
