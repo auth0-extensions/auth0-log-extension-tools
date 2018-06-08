@@ -1,4 +1,5 @@
 const _ = require('lodash');
+
 const expect = require('chai').expect;
 const tools = require('auth0-extension-tools');
 
@@ -12,7 +13,8 @@ const createProcessor = (data, settings) => {
       domain: 'foo.auth0.local',
       clientId: '1',
       clientSecret: 'secret',
-      maxRunTimeSeconds: 1
+      maxRunTimeSeconds: 1,
+      timeoutSeconds: 1.5
     },
     settings
   );
@@ -55,70 +57,66 @@ describe('LogsProcessor', () => {
       done();
     });
 
-    it('should process logs and send response', (done) => {
+    it('should process logs and send response', () => {
       helpers.mocks.logs({ times: 6 });
 
       const processor = createProcessor();
-      processor.run((logs, cb) => setTimeout(() => cb()))
+      return processor.run((logs, cb) => setTimeout(() => cb()))
         .then((result) => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.logsProcessed).to.equal(500);
           expect(result.checkpoint).to.equal('500');
-          done();
         });
     });
 
-    it('should process logs and done by timelimit', (done) => {
+    it('should process logs and done by timelimit', () => {
       helpers.mocks.logs({ times: 2 });
 
       const processor = createProcessor();
-      processor.run((logs, cb) => setTimeout(() => cb(), 500))
+      return processor.run((logs, cb) => setTimeout(() => cb(), 500))
         .then((result) => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.logsProcessed).to.equal(200);
           expect(result.checkpoint).to.equal('200');
-          done();
         });
     });
 
-    it('should process logs and done by error', (done) => {
+    it('should process logs and done by error', () => {
       helpers.mocks.logs();
       helpers.mocks.logs({ error: 'bad request' });
 
       const processor = createProcessor();
-      processor.run((logs, cb) => setTimeout(() => cb()))
+      return processor.run((logs, cb) => setTimeout(() => cb()))
         .then((result) => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.error).to.be.instanceof(Error, /bad request/);
           expect(result.status.logsProcessed).to.equal(100);
           expect(result.checkpoint).to.equal('100');
-          done();
         });
     });
 
-    it('should process logs and done with error by timeout', (done) => {
+    it('should process logs and done with error by timeout', () => {
       helpers.mocks.logs();
 
       const processor = createProcessor();
-      processor.run((logs, cb) => setTimeout(() => cb(new Error('ERROR')), 500))
+      return processor.run((logs, cb) => setTimeout(() => cb(new Error('ERROR')), 500))
         .then((result) => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.error).to.be.an.instanceof(Error, /ERROR/);
           expect(result.status.logsProcessed).to.equal(0);
           expect(result.checkpoint).to.equal(null);
-          done();
         });
     });
 
-    it('should process logs and done by error in onLogsReceived', (done) => {
+    it('should process logs and done by error in onLogsReceived', () => {
       helpers.mocks.logs();
 
       const processor = createProcessor();
-      processor.run((logs, cb) => cb(new Error('ERROR')))
+      return processor.run((logs, cb) => cb(new Error('ERROR')))
         .then((result) => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
@@ -126,11 +124,10 @@ describe('LogsProcessor', () => {
           expect(result.status.error[0]).to.be.an.instanceof(Error, /ERROR/);
           expect(result.status.logsProcessed).to.equal(0);
           expect(result.checkpoint).to.equal('100');
-          done();
         });
     });
 
-    it('should process large batch of logs', (done) => {
+    it('should process large batch of logs', () => {
       helpers.mocks.logs({ times: 6 });
 
       let logsReceivedRuns = 0;
@@ -140,93 +137,99 @@ describe('LogsProcessor', () => {
       });
 
       const processor = createProcessor(null, { batchSize: 1000 });
-      processor.run(onLogsReceived)
+      return processor.run(onLogsReceived)
         .then((result) => {
           expect(logsReceivedRuns).to.equal(1);
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.logsProcessed).to.equal(500);
           expect(result.checkpoint).to.equal('500');
-          done();
         });
     });
 
-    it('should add warning if logs are outdated', (done) => {
+    it('should add warning if logs are outdated', () => {
       helpers.mocks.logs({ outdated: true });
       helpers.mocks.logs({ empty: true });
 
       const processor = createProcessor();
-      processor.run((logs, cb) => setTimeout(() => cb()))
+      return processor.run((logs, cb) => setTimeout(() => cb()))
         .then((result) => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.warning).to.be.a('string');
           expect(result.status.logsProcessed).to.equal(100);
           expect(result.checkpoint).to.equal('100');
-          done();
         });
     });
 
-    it('shouldn\'t write anything to storage, if no logs processed', (done) => {
+    it('shouldn\'t write anything to storage, if no logs processed', () => {
       helpers.mocks.logs({ empty: true });
 
       const processor = createProcessor();
-      processor.run((logs, cb) => setTimeout(() => cb()))
+      return processor.run((logs, cb) => setTimeout(() => cb()))
         .then((result) => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.logsProcessed).to.equal(0);
           expect(result.checkpoint).to.equal(null);
-          done();
         });
     });
 
-    it('should done by error in onLogsReceived', (done) => {
+    it('should done by error in onLogsReceived', () => {
       helpers.mocks.logs({ empty: true });
 
       const processor = createProcessor();
-      processor.run((logs, cb) => cb(new Error('ERROR')))
+      return processor.run((logs, cb) => cb(new Error('ERROR')))
         .then((result) => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.logsProcessed).to.equal(0);
           expect(result.checkpoint).to.equal(null);
-          done();
         });
     });
 
-    it('should work with logTypes', (done) => {
+    it('should work with logTypes', () => {
       helpers.mocks.logs({ times: 1, type: 's' });
       helpers.mocks.logs({ times: 1, type: 'ss' });
       helpers.mocks.logs({ times: 4, type: 'ssa' });
 
       const processor = createProcessor(null, { logTypes: [ 's', 'ss' ] });
-      processor.run((logs, cb) => cb())
+      return processor.run((logs, cb) => cb())
         .then((result) => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.logsProcessed).to.equal(200);
           expect(result.checkpoint).to.equal('500');
-          done();
         });
     });
 
-    it('should work with logLevel', (done) => {
+    it('should work with logLevel', () => {
       helpers.mocks.logs({ times: 3, type: 'fcpro' });
       helpers.mocks.logs({ times: 3, type: 'ssa' });
 
       const processor = createProcessor(null, { logLevel: 4 });
-      processor.run((logs, cb) => cb())
+      return processor.run((logs, cb) => cb())
         .then((result) => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
           expect(result.status.logsProcessed).to.equal(300);
           expect(result.checkpoint).to.equal('500');
-          done();
         });
     });
 
-    it('should return report', (done) => {
+    it('should process logs when timeoutSeconds hit', () => {
+      helpers.mocks.logs();
+      helpers.mocks.logs({ delay: 10000 });
+
+      const processor = createProcessor();
+      return processor.run((logs, cb) => setTimeout(() => cb()))
+        .then((result) => {
+          expect(result.status.logsProcessed).to.equal(100);
+          expect(result.checkpoint).to.equal('100');
+        });
+    });
+
+    it('should return report', () => {
       const data = {
         logs: [
           {
@@ -265,14 +268,13 @@ describe('LogsProcessor', () => {
       };
       const processor = createProcessor(data);
 
-      processor.getReport('2017-05-11T10:20:00.000Z', '2017-05-11T10:50:00.000Z')
+      return processor.getReport('2017-05-11T10:20:00.000Z', '2017-05-11T10:50:00.000Z')
         .then((result) => {
           expect(result).to.be.an('object');
           expect(result.processed).to.equal(150);
           expect(result.warnings).to.equal(1);
           expect(result.errors).to.equal(1);
           expect(result.checkpoint).to.equal('49570627966157796216770346582398146766474360110828224562');
-          done();
         });
     });
   });
