@@ -13,7 +13,8 @@ const createProcessor = (data, settings) => {
       domain: 'foo.auth0.local',
       clientId: '1',
       clientSecret: 'secret',
-      maxRunTimeSeconds: 1
+      maxRunTimeSeconds: 1,
+      timeoutSeconds: 1.5
     },
     settings
   );
@@ -213,6 +214,18 @@ describe('LogsProcessor', () => {
           expect(result.status).to.be.an('object');
           expect(result.status.logsProcessed).to.equal(300);
           expect(result.checkpoint).to.equal('500');
+        });
+    });
+
+    it('should process logs when timeoutSeconds hit', () => {
+      helpers.mocks.logs();
+      helpers.mocks.logs({ delay: 10000 });
+
+      const processor = createProcessor();
+      return processor.run((logs, cb) => setTimeout(() => cb()))
+        .then((result) => {
+          expect(result.status.logsProcessed).to.equal(100);
+          expect(result.checkpoint).to.equal('100');
         });
     });
 

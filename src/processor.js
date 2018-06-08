@@ -1,3 +1,5 @@
+'use strict';
+
 const _ = require('lodash');
 const Promise = require('bluebird');
 const tools = require('auth0-extension-tools');
@@ -41,9 +43,7 @@ LogsProcessor.prototype.getLogFilter = function(options) {
 
     types = types.concat(
       _.map(
-        _.filter(typesFromLevel, (type) => {
-          return type.level >= options.logLevel;
-        }),
+        _.filter(typesFromLevel, type => type.level >= options.logLevel),
         'type'
       )
     );
@@ -57,14 +57,12 @@ LogsProcessor.prototype.getReport = function(start, end) {
   const endStamp = (end) ? new Date(end).getTime() : new Date().getTime();
 
   return this.storage.read()
-    .then((data) => {
-      return _.filter(data.logs, (log) => {
-        const logStart = new Date(log.start).getTime();
-        const logEnd = new Date(log.end).getTime();
+    .then(data => _.filter(data.logs, (log) => {
+      const logStart = new Date(log.start).getTime();
+      const logEnd = new Date(log.end).getTime();
 
-        return (logStart >= startStamp && logEnd <= endStamp);
-      });
-    })
+      return (logStart >= startStamp && logEnd <= endStamp);
+    }))
     .then((logs) => {
       const result = {
         type: 'report',
@@ -136,9 +134,7 @@ LogsProcessor.prototype.run = function(handler) {
 
       storage
         .done(status, checkpoint)
-        .then(() => {
-          return resolve({ status: status, checkpoint: checkpoint });
-        })
+        .then(() => resolve({ status: status, checkpoint: checkpoint }))
         .catch(reject);
     };
 
@@ -160,9 +156,7 @@ LogsProcessor.prototype.run = function(handler) {
 
         return storage
           .done(status, checkpoint)
-          .then(() => {
-            return resolve({ status: status, checkpoint: checkpoint });
-          })
+          .then(() => resolve({ status: status, checkpoint: checkpoint }))
           .catch(reject);
       }
 
@@ -220,96 +214,121 @@ LogsProcessor.prototype.run = function(handler) {
     };
 
     this.createStream(options)
-      .then((stream) => Promise.race([
-        new Promise((resolve, reject) => {
-          const nextLimit = getNextLimit();
+      .then(stream => new Promise((streamResolve, streamReject) => {
+        const nextLimit = getNextLimit();
+        let timedOut = false;
 
-          if (options.logger) {
-            options.logger.debug('Loading next batch of logs. Next limit:', nextLimit);
+        if (options.logger) {
+          options.logger.debug('Loading next batch of logs. Next limit:', nextLimit);
+        }
+
+        // Get the first batch.
+        stream.next(nextLimit);
+
+        // Process batch of logs.
+        stream.on('data', (data) => {
+          if (timedOut) {
+            if (options.logger) {
+              options.logger.info('LogApiClient "data" handler called after timeout');
+            }
+
+            return;
           }
 
-          // Get the first batch.
-          stream.next(nextLimit);
+          const logs = data.logs;
+          logsBatch = logsBatch.concat(logs);
 
-          // Process batch of logs.
-          stream.on('data', (data) => {
-            const logs = data.logs;
-            logsBatch = logsBatch.concat(logs);
+          if (logs && logs.length) {
+            lastLogDate = new Date(logs[logs.length - 1].date).getTime();
+          }
 
-            if (logs && logs.length) {
-              lastLogDate = new Date(logs[logs.length - 1].date).getTime();
+          // TODO: At some point, even if the batch is too small, we need to ship the logs.
+          if (logsBatch.length < batchSize && this.hasTimeLeft(start)) {
+            return stream.next(getNextLimit());
+          }
+
+          const processComplete = (err) => {
+            if (err) {
+              if (err.unrecoverable) {
+                return streamReject(err);
+              }
+
+              return retryProcess(err.err || err, stream)
+                .then(() => processComplete())
+                .catch(err => processComplete(err));
             }
 
-            // TODO: At some point, even if the batch is too small, we need to ship the logs.
-            if (logsBatch.length < batchSize && this.hasTimeLeft(start)) {
-              return stream.next(getNextLimit());
+            logsBatch = [];
+
+            if (!this.hasTimeLeft(start)) {
+              return stream.done();
             }
 
-            const processComplete = (err) => {
-              if (err) {
-                if (err.unrecoverable) {
-                  return reject(err);
-                }
-
-                return retryProcess(err.err || err, stream)
-                  .then(() => processComplete())
-                  .catch((err) => processComplete(err));
-              }
-
-              logsBatch = [];
-
-              if (!this.hasTimeLeft(start)) {
-                return stream.done();
-              }
-
-              stream.batchSaved();
-              return stream.next(getNextLimit());
-            };
-
-            handlerAsync(logsBatch)
-              .then(() => processComplete())
-              .catch((err) => processComplete(err));
-          });
-
-          const handleEnd = () => {
-            const processComplete = (err) => {
-              if (err) {
-                if (err.unrecoverable) {
-                  return reject(err);
-                }
-
-                return retryProcess(err.err || err, stream)
-                  .then(() => processComplete())
-                  .catch((err) => processComplete(err));
-              }
-
-              stream.batchSaved();
-              return resolve({
-                status: stream.status,
-                checkpoint: stream.lastCheckpoint
-              });
-            };
-            
-            handlerAsync(logsBatch)
-              .then(() => processComplete())
-              .catch((err) => processComplete(err));
+            stream.batchSaved();
+            return stream.next(getNextLimit());
           };
 
-          // We've reached the end of the stream.
-          stream.on('end', handleEnd);
+          return handlerAsync(logsBatch)
+            .then(() => processComplete())
+            .catch(err => processComplete(err));
+        });
 
-          // An error occured when processing the stream.
-          stream.on('error', (err) => reject({
-            err,
-            status: stream.status,
-            checkpoint: stream.previousCheckpoint
-          }));
-        }),
-        new Promise((resolve) => setTimeout(() => resolve(stream.status, stream.lastCheckpoint),
-                                           this.options.timeoutSeconds * 1000))
-      ]))
-      .then((result) => runSuccess(result.status, result.checkpoint))
-      .catch((result) => runFailed(result.err, result.status, result.checkpoint));
+        const handleEnd = () => {
+          if (timedOut) {
+            if (options.logger) {
+              options.logger.info('LogApiClient "end" handler called after timeout');
+            }
+
+            return;
+          }
+
+          const processComplete = (err) => {
+            if (err) {
+              if (err.unrecoverable) {
+                return streamReject(err);
+              }
+
+              return retryProcess(err.err || err, stream)
+                .then(() => processComplete())
+                .catch(err => processComplete(err));
+            }
+
+            stream.batchSaved();
+            return streamResolve({
+              status: stream.status,
+              checkpoint: stream.lastCheckpoint
+            });
+          };
+
+          return handlerAsync(logsBatch)
+            .then(() => processComplete())
+            .catch(err => processComplete(err));
+        };
+
+        new Promise((endResolve) => {
+          stream.on('end', endResolve);
+        })
+        .timeout(options.timeoutSeconds * 1000)
+        .then(handleEnd)
+        .catch(Promise.TimeoutError, () => {
+          if (options.logger) {
+            options.logger.info(`Hit timeoutSeconds (${options.timeoutSeconds} seconds)`);
+          }
+
+          handleEnd();
+          timedOut = true;
+        });
+
+        // An error occured when processing the stream.
+        stream.on('error', err => streamReject({
+          err,
+          status: stream.status,
+          checkpoint: stream.previousCheckpoint
+        }));
+      })
+      )
+      .then(result => runSuccess(result.status, result.checkpoint))
+      .catch(result => runFailed(result.err, result.status, result.checkpoint));
   });
 };
 
