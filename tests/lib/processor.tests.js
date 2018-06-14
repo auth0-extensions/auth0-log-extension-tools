@@ -16,8 +16,7 @@ const createProcessor = (data, settings, storage) => {
       domain: 'foo.auth0.local',
       clientId: '1',
       clientSecret: 'secret',
-      maxRunTimeSeconds: 1,
-      timeoutSeconds: 1.5
+      maxRunTimeSeconds: 1
     },
     settings
   );
@@ -60,6 +59,10 @@ describe('LogsProcessor', () => {
       done();
     });
 
+    afterEach(() => {
+      helpers.mocks.cleanAll();
+    });
+
     it('should process logs and send response', () => {
       helpers.mocks.logs({ times: 6 });
 
@@ -77,7 +80,7 @@ describe('LogsProcessor', () => {
       helpers.mocks.logs({ times: 2 });
 
       const processor = createProcessor();
-      return processor.run((logs, cb) => setTimeout(() => cb(), 500))
+      return processor.run((logs, cb) => setTimeout(() => cb(), 450))
         .then((result) => {
           expect(result).to.be.an('object');
           expect(result.status).to.be.an('object');
@@ -220,9 +223,21 @@ describe('LogsProcessor', () => {
         });
     });
 
-    it('should process logs when timeoutSeconds hit', () => {
-      helpers.mocks.logs();
-      helpers.mocks.logs({ delay: 10000 });
+    it('should make second logs API call if it will complete before maxRunTimeSeconds', () => {
+      helpers.mocks.logs({delay: 300});
+      helpers.mocks.logs({delay: 300});
+
+      const processor = createProcessor();
+      return processor.run((logs, cb) => setTimeout(() => cb()))
+        .then((result) => {
+          expect(result.status.logsProcessed).to.equal(200);
+          expect(result.checkpoint).to.equal('200');
+        });
+    });
+
+    it('should not make second logs API call if it will not complete before maxRunTimeSeconds', () => {
+      helpers.mocks.logs({delay: 550});
+      helpers.mocks.logs({delay: 550});
 
       const processor = createProcessor();
       return processor.run((logs, cb) => setTimeout(() => cb()))
@@ -231,26 +246,6 @@ describe('LogsProcessor', () => {
           expect(result.checkpoint).to.equal('100');
         });
     });
-
-    it('should correctly update storage when timeoutSeconds hit', () => {
-      helpers.mocks.logs();
-      helpers.mocks.logs({ delay: 10000 });
-
-      const storage = webtaskStorage();
-      const getAsync = Promise.promisify(storage.get);
-
-      const processor = createProcessor(null, null, storage);
-      return processor.run((logs, cb) => setTimeout(() => cb()))
-        .then(() => getAsync())
-        .then((storageState) => {
-          expect(storageState.checkpointId).to.equal('100');
-          expect(storageState.logs[0].logsProcessed).to.equal(100);
-          expect(storageState.logs[0].checkpoint).to.equal('100');
-          expect(storageState.logs[0].start).to.be.an.instanceof(Date);
-          expect(storageState.logs[0].end).to.be.an.instanceof(Date);
-        });
-    });
-
 
     it('should return report', () => {
       const data = {

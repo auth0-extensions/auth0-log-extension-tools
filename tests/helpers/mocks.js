@@ -50,3 +50,5 @@ module.exports.slack = () =>
   nock('https://slack.local')
     .post('/')
     .reply(204);
+
+module.exports.cleanAll = () => nock.cleanAll();
