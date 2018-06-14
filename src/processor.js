@@ -19,7 +19,7 @@ function LogsProcessor(storageContext, options) {
     {
       batchSize: 100,
       maxRetries: 5,
-      maxRunTimeSeconds: 20
+      maxRunTimeSeconds: 22
     },
     options
   );
@@ -29,7 +29,13 @@ LogsProcessor.prototype.hasTimeLeft = function(start, responseCount) {
   const now = new Date().getTime();
   const averageTime = (now - start) / responseCount;
   const limit = this.options.maxRunTimeSeconds;
-  return start + (limit * 1000) >= now + averageTime;
+  const timeLeft = (start + (limit * 1000)) - now; 
+
+  if (this.options.logger) {
+    this.options.logger.debug(`${timeLeft/1000} seconds run time left, average response time is ${averageTime/1000} seconds.`);
+  }
+
+  return timeLeft >= averageTime;
 };
 
 LogsProcessor.prototype.getLogFilter = function(options) {
@@ -106,7 +112,8 @@ LogsProcessor.prototype.createStream = function(options) {
         domain: options.domain,
         clientId: options.clientId,
         clientSecret: options.clientSecret,
-        tokenCache: this.storage
+        tokenCache: this.storage,
+        logger: options.logger
       });
     });
 };
@@ -256,6 +263,10 @@ LogsProcessor.prototype.run = function(handler) {
             logsBatch = [];
 
             if (!this.hasTimeLeft(start, responseCount)) {
+              if (options.logger) {
+                options.logger.debug('No time left for additional requests');
+              }
+              
               return stream.done();
             }
 

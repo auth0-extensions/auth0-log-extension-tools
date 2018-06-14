@@ -4,6 +4,9 @@ const tools = require('auth0-extension-tools');
 
 const LogsApiClient = require('./client');
 
+const MS_PER_S = 1000;
+const NS_PER_MS = 1000000;
+
 function LogsApiStream(options) {
   if (options === null || options === undefined) {
     throw new tools.ArgumentError('Must provide an options object');
@@ -42,7 +45,9 @@ LogsApiStream.prototype.done = function() {
 
 LogsApiStream.prototype.next = function(take) {
   const self = this;
+  const logger = this.options.logger;
   const perPage = (!self.options.types || !self.options.types.length) ? take : 100;
+
   if (self.remaining < 1) {
     self.status.warning = 'Auth0 Management API rate limit reached.';
     self.done();
@@ -53,10 +58,23 @@ LogsApiStream.prototype.next = function(take) {
     params.q = self.getQuery(self.options.types);
     params.sort = 'date:1';
 
+    if (logger) {
+      const startPoint = params.from ? `checkpoint ${params.from}` : `page ${params.page}`;
+      logger.debug(`Requesting logs from ${startPoint}`);
+    }
+
+    const startTime = process.hrtime();
     const getLogs = function() {
       self.client
         .getLogs(params)
         .then(function(data) {
+          const elapsedTime = process.hrtime(startTime);
+          const elapsedMillis = elapsedTime[0] * MS_PER_S + elapsedTime[1] / NS_PER_MS;
+
+          if (logger) {
+            logger.debug(`Retrieved logs in ${elapsedMillis}ms.`);
+          }
+
           const logs = data.logs;
           self.remaining = data.limits.remaining;
 
