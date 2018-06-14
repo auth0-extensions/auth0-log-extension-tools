@@ -19,17 +19,17 @@ function LogsProcessor(storageContext, options) {
     {
       batchSize: 100,
       maxRetries: 5,
-      maxRunTimeSeconds: 20,
-      timeoutSeconds: 28
+      maxRunTimeSeconds: 20
     },
     options
   );
 }
 
-LogsProcessor.prototype.hasTimeLeft = function(start) {
+LogsProcessor.prototype.hasTimeLeft = function(start, responseCount) {
   const now = new Date().getTime();
+  const averageTime = (now - start) / responseCount;
   const limit = this.options.maxRunTimeSeconds;
-  return start + (limit * 1000) >= now;
+  return start + (limit * 1000) >= now + averageTime;
 };
 
 LogsProcessor.prototype.getLogFilter = function(options) {
@@ -116,9 +116,10 @@ LogsProcessor.prototype.run = function(handler) {
 
   return new Promise((resolve, reject) => {
     const start = this.start;
-    var retries = 0;
-    var lastLogDate = 0;
-    var logsBatch = [];
+    let responseCount = 0;
+    let retries = 0;
+    let lastLogDate = 0;
+    let logsBatch = [];
     const storage = this.storage;
     const options = this.options;
     const batchSize = options.batchSize;
@@ -175,7 +176,7 @@ LogsProcessor.prototype.run = function(handler) {
 
     // Retry the process if it failed.
     const retryProcess = (err, stream) => {
-      if (!this.hasTimeLeft(start)) {
+      if (!this.hasTimeLeft(start, responseCount)) {
         return Promise.reject({
           err,
           status: stream.status,
@@ -227,23 +228,17 @@ LogsProcessor.prototype.run = function(handler) {
 
         // Process batch of logs.
         stream.on('data', (data) => {
-          if (timedOut) {
-            if (options.logger) {
-              options.logger.info('LogApiClient "data" handler called after timeout');
-            }
-
-            return;
-          }
-
           const logs = data.logs;
           logsBatch = logsBatch.concat(logs);
+
+          responseCount++;
 
           if (logs && logs.length) {
             lastLogDate = new Date(logs[logs.length - 1].date).getTime();
           }
 
           // TODO: At some point, even if the batch is too small, we need to ship the logs.
-          if (logsBatch.length < batchSize && this.hasTimeLeft(start)) {
+          if (logsBatch.length < batchSize && this.hasTimeLeft(start, responseCount)) {
             return stream.next(getNextLimit());
           }
 
@@ -260,7 +255,7 @@ LogsProcessor.prototype.run = function(handler) {
 
             logsBatch = [];
 
-            if (!this.hasTimeLeft(start)) {
+            if (!this.hasTimeLeft(start, responseCount)) {
               return stream.done();
             }
 
@@ -274,14 +269,6 @@ LogsProcessor.prototype.run = function(handler) {
         });
 
         const handleEnd = () => {
-          if (timedOut) {
-            if (options.logger) {
-              options.logger.info('LogApiClient "end" handler called after timeout');
-            }
-
-            return;
-          }
-
           const processComplete = (err) => {
             if (err) {
               if (err.unrecoverable) {
@@ -308,17 +295,7 @@ LogsProcessor.prototype.run = function(handler) {
         new Promise((endResolve) => {
           stream.on('end', endResolve);
         })
-        .timeout(options.timeoutSeconds * 1000)
-        .then(handleEnd)
-        .catch(Promise.TimeoutError, () => {
-          if (options.logger) {
-            options.logger.info(`Hit timeoutSeconds (${options.timeoutSeconds} seconds)`);
-          }
-
-          stream.done();
-          handleEnd();
-          timedOut = true;
-        });
+        .then(handleEnd);
 
         // An error occured when processing the stream.
         stream.on('error', err => streamReject({
