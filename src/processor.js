@@ -152,7 +152,7 @@ LogsProcessor.prototype.run = function(handler) {
         options.logger.debug('Processor run complete. Logs processed:', status.logsProcessed);
       }
 
-      if (status.logsProcessed > 0) {
+      if (checkpoint !== status.startCheckpoint) {
         const week = 604800000;
         const currentDate = new Date().getTime();
         const timeDiff = currentDate - lastLogDate;
