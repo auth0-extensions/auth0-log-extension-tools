@@ -22,6 +22,7 @@ function LogsApiStream(options) {
   this.previousCheckpoint = options.checkpointId || null;
   this.lastCheckpoint = options.checkpointId || null;
   this.status = {
+    startCheckpoint: options.checkpointId || null,
     start: new Date(),
     end: null,
     logsProcessed: 0

@@ -247,6 +247,26 @@ describe('LogsProcessor', () => {
         });
     });
 
+    it('should update checkpoint even if no events match given logTypes', () => {
+      helpers.mocks.logs({ delay: 550, type: 'sapi' });
+
+
+      const storage = webtaskStorage();
+      const getAsync = Promise.promisify(storage.get);
+
+      const processor = createProcessor(null, { logTypes: [ 's', 'ss' ] }, storage);
+      return processor.run((logs, cb) => setTimeout(cb()))
+        .then(() => getAsync())
+        .then((storageState) => {
+          expect(storageState.checkpointId).to.equal('100');
+          expect(storageState.logs[0].logsProcessed).to.equal(0);
+          expect(storageState.logs[0].checkpoint).to.equal('100');
+          expect(storageState.logs[0].start).to.be.an.instanceof(Date);
+          expect(storageState.logs[0].end).to.be.an.instanceof(Date);
+        });
+    });
+
+
     it('should return report', () => {
       const data = {
         logs: [
