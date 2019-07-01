@@ -209,7 +209,7 @@ LogsProcessor.prototype.run = function(handler) {
       ];
 
       if (options.logger) {
-        options.logger.error(error[0], error[1]);
+        options.logger.error(error[0] && error[0].message || error[0], error[1]);
       }
 
       // We're giving up.
