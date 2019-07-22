@@ -175,8 +175,8 @@ LogsProcessor.prototype.run = function(handler) {
     const getNextLimit = () => {
       var limit = batchSize;
       limit -= logsBatch.length;
-      if (limit > 100) {
-        limit = 100;
+      if (limit > 1000) {
+        limit = 1000;
       }
       return limit;
     };
