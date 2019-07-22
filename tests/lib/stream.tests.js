@@ -113,6 +113,23 @@ describe('LogsApiStream', () => {
       logger.next();
     });
 
+    it('should done reading logs with a higher log limit', (done) => {
+      helpers.mocks.logs({ take: 1000 });
+      // helpers.mocks.logs({ empty: true });
+
+      const logger = createStream();
+      logger.on('data', () => logger.done());
+      logger.on('end', () => {
+        logger.batchSaved();
+        expect(logger.status).to.be.an('object');
+        expect(logger.status.logsProcessed).to.equal(1000);
+        expect(logger.lastCheckpoint).to.equal('1000');
+        done();
+      });
+
+      logger.next();
+    });
+
     it('should done reading logs, if ratelimit reached', (done) => {
       helpers.mocks.logs({ limit: 0 });
 
