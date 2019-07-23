@@ -76,6 +76,19 @@ describe('LogsProcessor', () => {
         });
     });
 
+    it('should process higher limit logs and send response', () => {
+      helpers.mocks.logs({ take: 1000 });
+
+      const processor = createProcessor();
+      return processor.run((logs, cb) => setTimeout(() => cb()))
+        .then((result) => {
+          expect(result).to.be.an('object');
+          expect(result.status).to.be.an('object');
+          expect(result.status.logsProcessed).to.equal(1000);
+          expect(result.checkpoint).to.equal('1000');
+        });
+    });
+
     it('should process logs and done by timelimit', () => {
       helpers.mocks.logs({ times: 2 });
 
