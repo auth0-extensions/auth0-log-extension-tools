@@ -47,7 +47,7 @@ LogsApiStream.prototype.done = function() {
 LogsApiStream.prototype.next = function(take) {
   const self = this;
   const logger = this.options.logger;
-  const perPage = (!self.options.types || !self.options.types.length) ? take : 100;
+  const perPage = take;
 
   if (self.remaining < 1) {
     self.status.warning = 'Auth0 Management API rate limit reached.';
