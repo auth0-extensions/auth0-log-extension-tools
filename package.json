@@ -6,7 +6,7 @@
   "dependencies": {
     "auth0-extension-tools": "^1.2.1",
     "bluebird": "3.4.6",
-    "lodash": "4.17.11",
+    "lodash": "4.17.13",
     "superagent": "3.8.3"
   },
   "devDependencies": {
