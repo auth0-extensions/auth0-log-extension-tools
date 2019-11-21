@@ -573,6 +573,18 @@ const logTypes = {
     icon: 'icon-budicon-313',
     severity: sev.success,
     level: 1
+  },
+  sens: {
+    name: 'Success Exchange',
+    icon: 'icon-budicon-448',
+    severity: sev.success,
+    level: 1
+  },
+  fens: {
+    name: 'Failed Exchange',
+    icon: 'icon-budicon-448',
+    severity: sev.error,
+    level: 3
   }
 };
 
