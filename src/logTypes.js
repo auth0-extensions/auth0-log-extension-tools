@@ -74,6 +74,13 @@ const logTypes = {
     severity: sev.error,
     level: 3
   },
+  ferrt: {
+    name: 'Failed Exchange',
+    description: 'Reused Refresh Token',
+    icon: 'icon-budicon-456',
+    severity: sev.error,
+    level: 3
+  },
   seoobft: {
     name: 'Success Exchange',
     description: 'Password and OOB Challenge for Access Token',
