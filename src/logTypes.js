@@ -545,6 +545,18 @@ const logTypes = {
     severity: sev.success,
     level: 1
   },
+  gd_send_voice: {
+    name: 'Made voice call',
+    icon: 'icon-budicon-799',
+    severity: sev.success,
+    level: 1
+  },
+  gd_send_voice_failure: {
+    name: 'Error making MFA voice call',
+    icon: 'icon-budicon-799',
+    severity: sev.error,
+    level: 3
+  },
   fui: {
     name: 'Users import',
     icon: 'icon-budicon-299',
